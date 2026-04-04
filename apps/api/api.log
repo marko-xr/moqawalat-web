@@ -24,3 +24,9 @@ API listening on http://127.0.0.1:55000
 127.0.0.1 - - [04/Apr/2026:08:40:13 +0000] "GET /uploads/1775202429204-425020218.jpeg HTTP/1.1" 304 - "http://localhost:3000/" "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/146.0.0.0 Safari/537.36 Edg/146.0.0.0"
 127.0.0.1 - - [04/Apr/2026:08:42:16 +0000] "GET /api/services HTTP/1.1" 200 4240 "-" "node"
 127.0.0.1 - - [04/Apr/2026:08:42:16 +0000] "GET /api/projects HTTP/1.1" 200 2 "-" "node"
+10:24:10 PM [tsx] unlink in ./..\..\node_modules\.prisma\client\default.js Restarting...
+cAPI listening on http://127.0.0.1:55000
+11:32:36 PM [tsx] change in ./src\server.ts Restarting...
+cAPI listening on http://0.0.0.0:55000
+11:40:15 PM [tsx] change in ./src\server.ts Restarting...
+cAPI listening on http://0.0.0.0:55000
