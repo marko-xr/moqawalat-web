@@ -11,3 +11,37 @@
  ✓ Starting...
  ✓ Compiled in 555ms
  ✓ Ready in 3.1s
+[1m[31mFATAL[39m[0m: An unexpected Turbopack error occurred. Please report the content of C:\Users\xr343\AppData\Local\Temp\next-panic-a0f21ed00ece990d5adab7e8c9c9ea1e.log, along with a description of what you were doing when the error occurred, to https://github.com/vercel/next.js/issues/new?template=1.bug_report.yml
+[Error [TurbopackInternalError]: Next.js package not found
+
+Debug info:
+- Execution of get_entrypoints_with_issues_operation failed
+- Execution of EntrypointsOperation::new failed
+- Execution of Project::entrypoints failed
+- Execution of AppProject::routes failed
+- Execution of directory_tree_to_entrypoints_internal failed
+- Execution of get_next_package failed
+- Next.js package not found]
+node:events:497
+      throw er; // Unhandled 'error' event
+      ^
+
+Error: EPERM: operation not permitted, open 'C:\Users\xr343\OneDrive\Desktop\App-Projects\Moqawalat Web\apps\web\.next\trace'
+Emitted 'error' event on WriteStream instance at:
+    at emitErrorNT (node:internal/streams/destroy:169:8)
+    at emitErrorCloseNT (node:internal/streams/destroy:128:3)
+    at process.processTicksAndRejections (node:internal/process/task_queues:82:21) {
+  errno: -4048,
+  code: 'EPERM',
+  syscall: 'open',
+  path: 'C:\\Users\\xr343\\OneDrive\\Desktop\\App-Projects\\Moqawalat Web\\apps\\web\\.next\\trace'
+}
+
+Node.js v20.17.0
+npm error Lifecycle script `dev` failed with error:
+npm error code 1
+npm error path C:\Users\xr343\OneDrive\Desktop\App-Projects\Moqawalat Web\apps\web
+npm error workspace @moqawalat/web@1.0.0
+npm error location C:\Users\xr343\OneDrive\Desktop\App-Projects\Moqawalat Web\apps\web
+npm error command failed
+npm error command C:\WINDOWS\system32\cmd.exe /d /s /c next dev --turbopack
