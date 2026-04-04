@@ -1,0 +1,26 @@
+import type { Metadata } from "next";
+import ServiceCard from "@/components/ServiceCard";
+import { getServices } from "@/lib/api";
+
+export const metadata: Metadata = {
+  title: "الخدمات",
+  description: "اكتشف خدماتنا في الدهانات والعزل والأعمال الحديدية والجبس والديكور بالدمام.",
+  alternates: { canonical: "/services" }
+};
+
+export default async function ServicesPage() {
+  const services = await getServices();
+
+  return (
+    <section className="section">
+      <div className="container">
+        <h1>خدمات المقاولات</h1>
+        <div className="grid grid-services">
+          {services.map((service) => (
+            <ServiceCard key={service.id} service={service} />
+          ))}
+        </div>
+      </div>
+    </section>
+  );
+}

@@ -1,0 +1,119 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum UserRole {
+  OWNER
+  ADMIN
+}
+
+enum LeadStatus {
+  NEW
+  CONTACTED
+  QUALIFIED
+  CLOSED
+}
+
+model User {
+  id        String   @id @default(cuid())
+  name      String
+  email     String   @unique
+  password  String
+  role      UserRole @default(ADMIN)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model Service {
+  id              String   @id @default(cuid())
+  titleAr         String
+  slug            String   @unique
+  shortDescAr     String
+  contentAr       String
+  seoTitleAr      String?
+  seoDescriptionAr String?
+  imageUrl        String?
+  coverImage      String?
+  gallery         String[] @default([])
+  videoUrl        String?
+  isPublished     Boolean  @default(true)
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+}
+
+model Project {
+  id            String   @id @default(cuid())
+  titleAr       String
+  slug          String   @unique
+  locationAr    String
+  categoryAr    String
+  descriptionAr String
+  beforeImage   String?
+  afterImage    String?
+  coverImage    String?
+  gallery       String[] @default([])
+  videoUrl      String?
+  seoTitleAr    String?
+  seoDescriptionAr String?
+  isPublished   Boolean  @default(true)
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+}
+
+model BlogPost {
+  id              String   @id @default(cuid())
+  titleAr         String
+  slug            String   @unique
+  excerptAr       String
+  contentAr       String
+  seoTitleAr      String?
+  seoDescriptionAr String?
+  coverImage      String?
+  published       Boolean  @default(true)
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+}
+
+model Lead {
+  id          String     @id @default(cuid())
+  fullName    String
+  phone       String
+  whatsapp    String?
+  city        String
+  serviceType String
+  message     String?
+  locationUrl String?
+  imageUrl    String?
+  status      LeadStatus @default(NEW)
+  source      String      @default("website")
+  crmNotes    String?
+  pageUrl     String?
+  userAgent   String?
+  createdAt   DateTime    @default(now())
+  updatedAt   DateTime    @updatedAt
+}
+
+model Setting {
+  id             String   @id @default(cuid())
+  siteNameAr     String
+  siteDescAr     String
+  primaryPhone   String
+  whatsappNumber String
+  addressAr      String
+  lat            Float?
+  lng            Float?
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+}
+
+model ClickEvent {
+  id        String   @id @default(cuid())
+  type      String
+  pageUrl   String?
+  createdAt DateTime @default(now())
+}

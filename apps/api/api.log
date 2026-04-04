@@ -1,0 +1,26 @@
+
+> @moqawalat/api@1.0.0 dev
+> tsx watch src/server.ts
+
+API listening on http://127.0.0.1:55000
+127.0.0.1 - - [04/Apr/2026:07:57:53 +0000] "GET /api/health HTTP/1.1" 200 37 "-" "Mozilla/5.0 (Windows NT; Windows NT 10.0; en-US) WindowsPowerShell/5.1.26100.8115"
+127.0.0.1 - - [04/Apr/2026:07:58:15 +0000] "GET /api/projects HTTP/1.1" 200 2 "-" "node"
+127.0.0.1 - - [04/Apr/2026:07:58:15 +0000] "GET /api/services HTTP/1.1" 200 4240 "-" "node"
+127.0.0.1 - - [04/Apr/2026:07:58:47 +0000] "GET /api/projects HTTP/1.1" 200 2 "-" "node"
+127.0.0.1 - - [04/Apr/2026:07:58:47 +0000] "GET /api/services HTTP/1.1" 200 4240 "-" "node"
+127.0.0.1 - - [04/Apr/2026:07:58:48 +0000] "GET /uploads/1775202162525-875773613.jpeg HTTP/1.1" 304 - "http://localhost:3000/" "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/146.0.0.0 Safari/537.36 Edg/146.0.0.0"
+127.0.0.1 - - [04/Apr/2026:07:58:48 +0000] "GET /uploads/1775202200944-663917457.jpeg HTTP/1.1" 304 - "http://localhost:3000/" "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/146.0.0.0 Safari/537.36 Edg/146.0.0.0"
+127.0.0.1 - - [04/Apr/2026:07:58:48 +0000] "GET /uploads/1775238563519-755928783.png HTTP/1.1" 304 - "http://localhost:3000/" "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/146.0.0.0 Safari/537.36 Edg/146.0.0.0"
+127.0.0.1 - - [04/Apr/2026:07:58:50 +0000] "GET /uploads/1775202429204-425020218.jpeg HTTP/1.1" 304 - "http://localhost:3000/" "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/146.0.0.0 Safari/537.36 Edg/146.0.0.0"
+127.0.0.1 - - [04/Apr/2026:07:58:53 +0000] "GET /api/leads?page=1&pageSize=500 HTTP/1.1" 200 3718 "-" "node"
+127.0.0.1 - - [04/Apr/2026:07:58:53 +0000] "GET /uploads/1775236033355-292228100.jpeg HTTP/1.1" 304 - "http://localhost:3000/" "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/146.0.0.0 Safari/537.36 Edg/146.0.0.0"
+127.0.0.1 - - [04/Apr/2026:07:58:53 +0000] "GET /uploads/1775230350609-296765229.jpg HTTP/1.1" 304 - "http://localhost:3000/" "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/146.0.0.0 Safari/537.36 Edg/146.0.0.0"
+127.0.0.1 - - [04/Apr/2026:07:58:53 +0000] "GET /uploads/1774810830803-311530787.jpeg HTTP/1.1" 304 - "http://localhost:3000/" "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/146.0.0.0 Safari/537.36 Edg/146.0.0.0"
+127.0.0.1 - - [04/Apr/2026:08:40:11 +0000] "GET /api/services HTTP/1.1" 200 4240 "-" "node"
+127.0.0.1 - - [04/Apr/2026:08:40:11 +0000] "GET /api/projects HTTP/1.1" 200 2 "-" "node"
+127.0.0.1 - - [04/Apr/2026:08:40:12 +0000] "GET /uploads/1775202162525-875773613.jpeg HTTP/1.1" 304 - "http://localhost:3000/" "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/146.0.0.0 Safari/537.36 Edg/146.0.0.0"
+127.0.0.1 - - [04/Apr/2026:08:40:12 +0000] "GET /uploads/1775202200944-663917457.jpeg HTTP/1.1" 304 - "http://localhost:3000/" "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/146.0.0.0 Safari/537.36 Edg/146.0.0.0"
+127.0.0.1 - - [04/Apr/2026:08:40:13 +0000] "GET /uploads/1775238563519-755928783.png HTTP/1.1" 304 - "http://localhost:3000/" "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/146.0.0.0 Safari/537.36 Edg/146.0.0.0"
+127.0.0.1 - - [04/Apr/2026:08:40:13 +0000] "GET /uploads/1775202429204-425020218.jpeg HTTP/1.1" 304 - "http://localhost:3000/" "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/146.0.0.0 Safari/537.36 Edg/146.0.0.0"
+127.0.0.1 - - [04/Apr/2026:08:42:16 +0000] "GET /api/services HTTP/1.1" 200 4240 "-" "node"
+127.0.0.1 - - [04/Apr/2026:08:42:16 +0000] "GET /api/projects HTTP/1.1" 200 2 "-" "node"

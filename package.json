@@ -1,0 +1,30 @@
+{
+  "name": "moqawalat-web-platform",
+  "private": true,
+  "version": "1.0.0",
+  "workspaces": [
+    "apps/*"
+  ],
+  "scripts": {
+    "dev": "concurrently \"npm run dev --workspace @moqawalat/api\" \"npm run dev --workspace @moqawalat/web\"",
+    "build": "npm run build --workspace @moqawalat/api && npm run build --workspace @moqawalat/web",
+    "start": "concurrently \"npm run start --workspace @moqawalat/api\" \"npm run start --workspace @moqawalat/web\"",
+    "prisma:generate": "prisma generate",
+    "prisma:migrate": "prisma migrate dev",
+    "prisma:seed": "tsx prisma/seed.ts"
+  },
+  "prisma": {
+    "seed": "tsx prisma/seed.ts"
+  },
+  "devDependencies": {
+    "concurrently": "^9.2.0",
+    "prisma": "^5.22.0",
+    "ts-node": "^10.9.2",
+    "tsx": "^4.20.5",
+    "typescript": "^5.8.3"
+  },
+  "dependencies": {
+    "@prisma/client": "^5.22.0",
+    "bcryptjs": "^2.4.3"
+  }
+}
