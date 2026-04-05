@@ -1,4 +1,5 @@
 import "dotenv/config";
+import "express-async-errors";
 import express from "express";
 import cors from "cors";
 import helmet from "helmet";
@@ -93,5 +94,6 @@ app.use("/api/settings", settingsRoutes);
 app.use("/api/analytics", analyticsRoutes);
 
 app.use((err: Error, _req: express.Request, res: express.Response, _next: express.NextFunction) => {
+  console.error("API error:", err);
   return res.status(500).json({ message: err.message || "Unexpected server error" });
 });
