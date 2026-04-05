@@ -55,8 +55,33 @@ app.use(
 
 app.use("/uploads", express.static(path.resolve(process.cwd(), "uploads")));
 
+app.get("/", (_req, res) => {
+  res.send("API is running");
+});
+
+app.get("/api", (_req, res) => {
+  res.json({ message: "API working" });
+});
+
 app.get("/api/health", (_req, res) => {
   res.json({ ok: true, service: "moqawalat-api" });
+});
+
+app.get("/api/debug/routes", (_req, res) => {
+  res.json({
+    routes: [
+      "/api/health",
+      "/api/services",
+      "/api/services/:slug",
+      "/api/projects",
+      "/api/projects/:slug",
+      "/api/blog",
+      "/api/blog/:slug",
+      "/api/settings",
+      "/api/leads",
+      "/api/analytics"
+    ]
+  });
 });
 
 app.use("/api/auth", authRoutes);
