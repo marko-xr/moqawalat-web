@@ -43,7 +43,7 @@ export default async function BlogPage() {
         ) : (
           <div className="grid grid-3">
             {posts.map((post) => (
-              <article key={post.id} className="card">
+              <article key={post.id} className="card blog-post-card">
                 <div className="blog-card-media">
                   <Image
                     src={post.coverImage || "/images/main-image.webp"}
