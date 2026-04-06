@@ -1,5 +1,6 @@
 import Link from "next/link";
 import Image from "next/image";
+import { Suspense } from "react";
 import type { Metadata } from "next";
 import QuoteForm from "@/components/QuoteForm";
 import ServiceCard from "@/components/ServiceCard";
@@ -14,7 +15,7 @@ export const metadata: Metadata = {
 };
 
 export default async function HomePage() {
-  const [services, projects] = await Promise.all([getServices(), getProjects()]);
+  const services = await getServices();
   const settings = {
     name: "مقاولات عامة الدمام",
     phone: process.env.NEXT_PUBLIC_PHONE_NUMBER || "966556741880",
@@ -62,6 +63,7 @@ export default async function HomePage() {
                 className="hero-main-image"
                 width={1400}
                 height={900}
+                quality={72}
                 sizes="(max-width: 1024px) 100vw, 60vw"
                 priority
               />
@@ -98,7 +100,7 @@ export default async function HomePage() {
           <h2>لماذا يختارنا العملاء؟</h2>
           <div className="grid trust-grid">
             <article className="card trust-card">
-              <strong>+{Math.max(projects.length, 100)}</strong>
+              <strong>+100</strong>
               <h3>عدد مشاريع موثوق</h3>
               <p>تنفيذ متنوع للمنازل والفلل والمباني التجارية في الدمام والخبر والظهران.</p>
             </article>
@@ -143,27 +145,53 @@ export default async function HomePage() {
         </div>
       </section>
 
-      <section className="section">
-        <div className="container">
-          <h2>أحدث المشاريع</h2>
-          <div className="grid grid-3">
-            {projects.slice(0, 3).map((project) => (
-              <article key={project.id} className="card">
-                <h3>{project.titleAr}</h3>
-                <p>{project.descriptionAr}</p>
-                <small>
-                  {project.locationAr} - {project.categoryAr}
-                </small>
-              </article>
-            ))}
-          </div>
-        </div>
-      </section>
+      <Suspense
+        fallback={
+          <section className="section">
+            <div className="container">
+              <h2>أحدث المشاريع</h2>
+              <div className="grid grid-3">
+                {[1, 2, 3].map((item) => (
+                  <article key={item} className="card">
+                    <h3>جاري تحميل المشاريع...</h3>
+                    <p>يتم جلب أحدث الأعمال الآن.</p>
+                  </article>
+                ))}
+              </div>
+            </div>
+          </section>
+        }
+      >
+        <HomeProjectsSection />
+      </Suspense>
 
       <script
         type="application/ld+json"
         dangerouslySetInnerHTML={{ __html: JSON.stringify(localBusinessSchema) }}
       />
     </>
+  );
+}
+
+async function HomeProjectsSection() {
+  const projects = await getProjects();
+
+  return (
+    <section className="section">
+      <div className="container">
+        <h2>أحدث المشاريع</h2>
+        <div className="grid grid-3">
+          {projects.slice(0, 3).map((project) => (
+            <article key={project.id} className="card">
+              <h3>{project.titleAr}</h3>
+              <p>{project.descriptionAr}</p>
+              <small>
+                {project.locationAr} - {project.categoryAr}
+              </small>
+            </article>
+          ))}
+        </div>
+      </div>
+    </section>
   );
 }

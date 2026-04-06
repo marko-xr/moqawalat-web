@@ -1,4 +1,5 @@
 import type { Request, Response } from "express";
+import { Prisma } from "@prisma/client";
 import { body } from "express-validator";
 import { prisma } from "../services/prisma.js";
 import { parseBoolean, parseGallery, uploadMediaFile, uploadMediaFiles } from "../services/media.js";
@@ -42,6 +43,48 @@ function normalizeDescriptions(values: string[], targetLength: number) {
   }
 
   return normalized;
+}
+
+const SERVICE_SELECT_BASE = {
+  id: true,
+  titleAr: true,
+  slug: true,
+  shortDescAr: true,
+  contentAr: true,
+  seoTitleAr: true,
+  seoDescriptionAr: true,
+  imageUrl: true,
+  coverImage: true,
+  gallery: true,
+  videoUrl: true,
+  isPublished: true,
+  createdAt: true,
+  updatedAt: true
+} as const;
+
+const SERVICE_SELECT_WITH_DESCRIPTIONS = {
+  ...SERVICE_SELECT_BASE,
+  galleryDescriptions: true
+} as const;
+
+function isMissingGalleryDescriptionsColumnError(error: unknown) {
+  if (!(error instanceof Prisma.PrismaClientKnownRequestError)) {
+    return false;
+  }
+
+  if (error.code !== "P2022") {
+    return false;
+  }
+
+  const column = String((error.meta as { column?: string } | undefined)?.column || "");
+  return column.includes("galleryDescriptions");
+}
+
+function appendEmptyGalleryDescriptions<T extends { gallery: string[] }>(service: T) {
+  return {
+    ...service,
+    galleryDescriptions: Array(service.gallery?.length || 0).fill("")
+  };
 }
 
 export const serviceCreateValidation = [
@@ -93,21 +136,71 @@ export const serviceUpdateValidation = [
 ];
 
 export async function getServices(_req: Request, res: Response) {
-  const services = await (prisma.service as any).findMany({
-    where: { isPublished: true },
-    orderBy: { createdAt: "desc" }
-  });
-  return res.json(services);
+  try {
+    const services = await prisma.service.findMany({
+      where: { isPublished: true },
+      orderBy: { createdAt: "desc" },
+      select: SERVICE_SELECT_WITH_DESCRIPTIONS
+    });
+
+    return res.json(services);
+  } catch (error) {
+    if (!isMissingGalleryDescriptionsColumnError(error)) {
+      throw error;
+    }
+
+    const services = await prisma.service.findMany({
+      where: { isPublished: true },
+      orderBy: { createdAt: "desc" },
+      select: SERVICE_SELECT_BASE
+    });
+
+    return res.json(services.map((service) => appendEmptyGalleryDescriptions(service)));
+  }
 }
 
 export async function getServicesAdmin(_req: Request, res: Response) {
-  const services = await prisma.service.findMany({ orderBy: { createdAt: "desc" } });
-  return res.json(services);
+  try {
+    const services = await prisma.service.findMany({
+      orderBy: { createdAt: "desc" },
+      select: SERVICE_SELECT_WITH_DESCRIPTIONS
+    });
+
+    return res.json(services);
+  } catch (error) {
+    if (!isMissingGalleryDescriptionsColumnError(error)) {
+      throw error;
+    }
+
+    const services = await prisma.service.findMany({
+      orderBy: { createdAt: "desc" },
+      select: SERVICE_SELECT_BASE
+    });
+
+    return res.json(services.map((service) => appendEmptyGalleryDescriptions(service)));
+  }
 }
 
 export async function getServiceBySlug(req: Request, res: Response) {
-  const service = await prisma.service.findUnique({ where: { slug: req.params.slug } });
-  const serviceData = service as any;
+  let serviceData: any;
+
+  try {
+    serviceData = await prisma.service.findUnique({
+      where: { slug: req.params.slug },
+      select: SERVICE_SELECT_WITH_DESCRIPTIONS
+    });
+  } catch (error) {
+    if (!isMissingGalleryDescriptionsColumnError(error)) {
+      throw error;
+    }
+
+    const fallbackService = await prisma.service.findUnique({
+      where: { slug: req.params.slug },
+      select: SERVICE_SELECT_BASE
+    });
+
+    serviceData = fallbackService ? appendEmptyGalleryDescriptions(fallbackService) : null;
+  }
 
   if (!serviceData) {
     return res.status(404).json({ message: "Service not found" });
@@ -154,7 +247,20 @@ export async function createService(req: Request, res: Response) {
       isPublished: typeof isPublished === "boolean" ? isPublished : true
     };
 
-  const service = await prisma.service.create({ data: createData });
+  let service: any;
+
+  try {
+    service = await prisma.service.create({ data: createData });
+  } catch (error) {
+    if (!isMissingGalleryDescriptionsColumnError(error)) {
+      throw error;
+    }
+
+    const fallbackCreateData = { ...createData };
+    delete fallbackCreateData.galleryDescriptions;
+    service = appendEmptyGalleryDescriptions(await prisma.service.create({ data: fallbackCreateData }));
+  }
+
   return res.status(201).json(service);
 }
 
@@ -203,10 +309,29 @@ export async function updateService(req: Request, res: Response) {
       isPublished: typeof isPublished === "boolean" ? isPublished : undefined
     };
 
-  const service = await prisma.service.update({
-    where: { id: req.params.id },
-    data: updateData
-  });
+  let service: any;
+
+  try {
+    service = await prisma.service.update({
+      where: { id: req.params.id },
+      data: updateData
+    });
+  } catch (error) {
+    if (!isMissingGalleryDescriptionsColumnError(error)) {
+      throw error;
+    }
+
+    const fallbackUpdateData = { ...updateData };
+    delete fallbackUpdateData.galleryDescriptions;
+
+    service = appendEmptyGalleryDescriptions(
+      await prisma.service.update({
+        where: { id: req.params.id },
+        data: fallbackUpdateData
+      })
+    );
+  }
+
   return res.json(service);
 }
 
