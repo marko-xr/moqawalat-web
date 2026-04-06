@@ -1,4 +1,5 @@
 import Link from "next/link";
+import Image from "next/image";
 import type { Service } from "@/lib/types";
 
 export default function ServiceCard({ service }: { service: Service }) {
@@ -7,7 +8,13 @@ export default function ServiceCard({ service }: { service: Service }) {
   return (
     <article className="card service-card">
       <div className="service-card-media">
-        <img src={cover} alt={service.titleAr} loading="lazy" decoding="async" />
+        <Image
+          src={cover}
+          alt={service.titleAr}
+          width={800}
+          height={500}
+          sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw"
+        />
       </div>
       <h3>{service.titleAr}</h3>
       <p>{service.shortDescAr}</p>

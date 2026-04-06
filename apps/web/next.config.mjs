@@ -2,6 +2,7 @@
 const nextConfig = {
   images: {
     formats: ["image/avif", "image/webp"],
+    minimumCacheTTL: 2678400,
     remotePatterns: [
       {
         protocol: "http",
@@ -19,6 +20,11 @@ const nextConfig = {
         protocol: "http",
         hostname: "127.0.0.1",
         port: "55000",
+        pathname: "/uploads/**"
+      },
+      {
+        protocol: "https",
+        hostname: "moqawalatapi-production.up.railway.app",
         pathname: "/uploads/**"
       },
       {

@@ -1,9 +1,11 @@
 import type { Metadata } from "next";
 import QuoteForm from "@/components/QuoteForm";
+import { LOCAL_AREAS, SEO_KEYWORDS } from "@/lib/seo";
 
 export const metadata: Metadata = {
   title: "اتصل بنا",
   description: "تواصل معنا الآن للحصول على عرض سعر فوري لخدمات المقاولات بالدمام.",
+  keywords: [...SEO_KEYWORDS.global, ...SEO_KEYWORDS.services.slice(0, 10)],
   alternates: { canonical: "/contact" }
 };
 
@@ -23,7 +25,7 @@ export default function ContactPage() {
           <p>
             واتساب: <span className="phone-ltr" dir="ltr">+{whatsapp}</span>
           </p>
-          <p>نخدم: الدمام، الخبر، الظهران</p>
+          <p>نخدم: {LOCAL_AREAS.join("، ")}</p>
         </div>
         <QuoteForm />
       </div>

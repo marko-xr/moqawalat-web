@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { GoogleAnalytics } from "@next/third-parties/google";
 import { Cairo } from "next/font/google";
+import { HOMEPAGE_SEO_DESCRIPTION, SEO_KEYWORDS } from "@/lib/seo";
 import "./globals.css";
 
 const cairo = Cairo({
@@ -16,17 +17,17 @@ export const metadata: Metadata = {
     default: "مقاولات عامة الدمام",
     template: "%s | مقاولات عامة الدمام"
   },
-  description:
-    "خدمات مقاولات عامة بالدمام: دهانات، عزل أسطح، أعمال حديد، جبس وديكورات. اطلب عرض سعر الآن عبر الواتساب أو الاتصال المباشر.",
-  keywords: [
-    "مقاولات عامة الدمام",
-    "مقاول دهانات الدمام",
-    "عزل اسطح الخبر",
-    "مظلات وسواتر الظهران",
-    "جبس وديكور المنطقة الشرقية"
-  ],
+  description: HOMEPAGE_SEO_DESCRIPTION,
+  keywords: [...SEO_KEYWORDS.global, ...SEO_KEYWORDS.services],
   alternates: {
     canonical: "/"
+  },
+  openGraph: {
+    type: "website",
+    locale: "ar_SA",
+    title: "مقاولات عامة الدمام",
+    description: HOMEPAGE_SEO_DESCRIPTION,
+    siteName: "مقاولات عامة الدمام"
   },
   icons: {
     icon: "/images/logo-mark.png",

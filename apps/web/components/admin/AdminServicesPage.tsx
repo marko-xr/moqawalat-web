@@ -18,6 +18,7 @@ type ServiceFormState = {
   isPublished: boolean;
   coverImage: string;
   gallery: string[];
+  galleryDescriptions: string[];
 };
 
 const emptyForm: ServiceFormState = {
@@ -30,7 +31,8 @@ const emptyForm: ServiceFormState = {
   videoUrl: "",
   isPublished: true,
   coverImage: "",
-  gallery: []
+  gallery: [],
+  galleryDescriptions: []
 };
 
 function toSlug(value: string) {
@@ -62,7 +64,10 @@ export default function AdminServicesPage() {
   const [form, setForm] = useState<ServiceFormState>(emptyForm);
   const [coverFile, setCoverFile] = useState<File | null>(null);
   const [galleryFiles, setGalleryFiles] = useState<File[]>([]);
+  const [newGalleryDescriptions, setNewGalleryDescriptions] = useState<string[]>([]);
   const [videoFile, setVideoFile] = useState<File | null>(null);
+  const [removeCoverImage, setRemoveCoverImage] = useState(false);
+  const [removeVideoUrl, setRemoveVideoUrl] = useState(false);
   const [deleteTarget, setDeleteTarget] = useState<Service | null>(null);
 
   const totalPages = Math.max(Math.ceil(total / PAGE_SIZE), 1);
@@ -71,13 +76,15 @@ export default function AdminServicesPage() {
     if (coverFile) {
       return URL.createObjectURL(coverFile);
     }
-    return form.coverImage || "";
-  }, [coverFile, form.coverImage]);
 
-  const galleryPreviews = useMemo(() => {
-    const fileUrls = galleryFiles.map((file) => URL.createObjectURL(file));
-    return [...form.gallery, ...fileUrls];
-  }, [galleryFiles, form.gallery]);
+    if (removeCoverImage) {
+      return "";
+    }
+
+    return form.coverImage || "";
+  }, [coverFile, form.coverImage, removeCoverImage]);
+
+  const newGalleryPreviews = useMemo(() => galleryFiles.map((file) => URL.createObjectURL(file)), [galleryFiles]);
 
   const loadServices = useCallback(async () => {
     setLoading(true);
@@ -118,20 +125,22 @@ export default function AdminServicesPage() {
 
   useEffect(() => {
     return () => {
-      if (coverFile) {
+      if (coverFile && coverPreview) {
         URL.revokeObjectURL(coverPreview);
       }
-      galleryFiles.forEach((file, index) => {
-        URL.revokeObjectURL(galleryPreviews[index]);
-      });
+
+      newGalleryPreviews.forEach((preview) => URL.revokeObjectURL(preview));
     };
-  }, [coverFile, coverPreview, galleryFiles, galleryPreviews]);
+  }, [coverFile, coverPreview, newGalleryPreviews]);
 
   function resetForm() {
     setForm(emptyForm);
     setCoverFile(null);
     setGalleryFiles([]);
+    setNewGalleryDescriptions([]);
     setVideoFile(null);
+    setRemoveCoverImage(false);
+    setRemoveVideoUrl(false);
   }
 
   function handleEdit(item: Service) {
@@ -146,11 +155,17 @@ export default function AdminServicesPage() {
       videoUrl: item.videoUrl || "",
       isPublished: item.isPublished ?? true,
       coverImage: item.coverImage || item.imageUrl || "",
-      gallery: item.gallery ? [...item.gallery] : []
+      gallery: item.gallery ? [...item.gallery] : [],
+      galleryDescriptions: item.galleryDescriptions
+        ? [...item.galleryDescriptions, ...Array(Math.max((item.gallery?.length || 0) - item.galleryDescriptions.length, 0)).fill("")]
+        : Array(item.gallery?.length || 0).fill("")
     });
     setCoverFile(null);
     setGalleryFiles([]);
+    setNewGalleryDescriptions([]);
     setVideoFile(null);
+    setRemoveCoverImage(false);
+    setRemoveVideoUrl(false);
     setNotice("");
   }
 
@@ -158,13 +173,15 @@ export default function AdminServicesPage() {
     if (index < form.gallery.length) {
       setForm((current) => ({
         ...current,
-        gallery: current.gallery.filter((_, i) => i !== index)
+        gallery: current.gallery.filter((_, i) => i !== index),
+        galleryDescriptions: current.galleryDescriptions.filter((_, i) => i !== index)
       }));
       return;
     }
 
     const fileIndex = index - form.gallery.length;
     setGalleryFiles((current) => current.filter((_, i) => i !== fileIndex));
+    setNewGalleryDescriptions((current) => current.filter((_, i) => i !== fileIndex));
   }
 
   async function handleSubmit(event: React.FormEvent<HTMLFormElement>) {
@@ -182,13 +199,21 @@ export default function AdminServicesPage() {
     payload.append("videoUrl", form.videoUrl);
     payload.append("isPublished", String(form.isPublished));
     payload.append("gallery", JSON.stringify(form.gallery));
+    payload.append("galleryDescriptions", JSON.stringify(form.galleryDescriptions));
+    payload.append("newGalleryDescriptions", JSON.stringify(newGalleryDescriptions));
 
-    if (form.coverImage && !coverFile) {
+    if (removeCoverImage) {
+      payload.append("removeCoverImage", "true");
+    } else if (form.coverImage && !coverFile) {
       payload.append("coverImage", form.coverImage);
     }
 
     if (coverFile) {
       payload.append("coverImage", coverFile);
+    }
+
+    if (removeVideoUrl) {
+      payload.append("removeVideoUrl", "true");
     }
 
     if (videoFile) {
@@ -332,7 +357,10 @@ export default function AdminServicesPage() {
             <input
               id="service-video"
               value={form.videoUrl}
-              onChange={(event) => setForm((current) => ({ ...current, videoUrl: event.target.value }))}
+              onChange={(event) => {
+                setRemoveVideoUrl(false);
+                setForm((current) => ({ ...current, videoUrl: event.target.value }));
+              }}
               placeholder="https://"
             />
           </div>
@@ -355,8 +383,24 @@ export default function AdminServicesPage() {
               id="service-cover"
               type="file"
               accept="image/*"
-              onChange={(event) => setCoverFile(event.target.files?.[0] || null)}
+              onChange={(event) => {
+                setRemoveCoverImage(false);
+                setCoverFile(event.target.files?.[0] || null);
+              }}
             />
+            <div className="admin-actions">
+              <button
+                className="btn btn-outline"
+                type="button"
+                onClick={() => {
+                  setCoverFile(null);
+                  setRemoveCoverImage(true);
+                  setForm((current) => ({ ...current, coverImage: "" }));
+                }}
+              >
+                إزالة صورة الغلاف
+              </button>
+            </div>
             {coverPreview ? (
               <div className="admin-media-preview">
                 <img src={coverPreview} alt="معاينة الغلاف" />
@@ -371,21 +415,55 @@ export default function AdminServicesPage() {
               type="file"
               multiple
               accept="image/*"
-              onChange={(event) => setGalleryFiles(Array.from(event.target.files || []))}
+              onChange={(event) => {
+                const files = Array.from(event.target.files || []);
+                setGalleryFiles(files);
+                setNewGalleryDescriptions((current) => files.map((_, index) => current[index] || ""));
+              }}
             />
-            {galleryPreviews.length ? (
-              <div className="admin-media-grid">
-                {galleryPreviews.map((src, index) => (
-                  <button
-                    className="admin-media-item"
-                    key={`${src}-${index}`}
-                    type="button"
-                    onClick={() => handleRemoveGallery(index)}
-                    aria-label="إزالة"
-                  >
+            {form.gallery.length || newGalleryPreviews.length ? (
+              <div className="admin-gallery-editor">
+                {form.gallery.map((src, index) => (
+                  <div className="admin-gallery-item" key={`${src}-${index}`}>
                     <img src={src} alt="معاينة" />
-                  </button>
+                    <input
+                      type="text"
+                      value={form.galleryDescriptions[index] || ""}
+                      onChange={(event) =>
+                        setForm((current) => ({
+                          ...current,
+                          galleryDescriptions: current.galleryDescriptions.map((item, i) =>
+                            i === index ? event.target.value : item
+                          )
+                        }))
+                      }
+                      placeholder="وصف الصورة"
+                    />
+                    <button className="btn btn-outline" type="button" onClick={() => handleRemoveGallery(index)}>
+                      إزالة
+                    </button>
+                  </div>
                 ))}
+
+                {newGalleryPreviews.map((src, fileIndex) => {
+                  const absoluteIndex = form.gallery.length + fileIndex;
+                  return (
+                    <div className="admin-gallery-item" key={`${src}-${absoluteIndex}`}>
+                      <img src={src} alt="معاينة" />
+                      <input
+                        type="text"
+                        value={newGalleryDescriptions[fileIndex] || ""}
+                        onChange={(event) =>
+                          setNewGalleryDescriptions((current) => current.map((item, i) => (i === fileIndex ? event.target.value : item)))
+                        }
+                        placeholder="وصف الصورة"
+                      />
+                      <button className="btn btn-outline" type="button" onClick={() => handleRemoveGallery(absoluteIndex)}>
+                        إزالة
+                      </button>
+                    </div>
+                  );
+                })}
               </div>
             ) : null}
           </div>
@@ -396,8 +474,24 @@ export default function AdminServicesPage() {
               id="service-video-file"
               type="file"
               accept="video/mp4,video/webm,video/quicktime"
-              onChange={(event) => setVideoFile(event.target.files?.[0] || null)}
+              onChange={(event) => {
+                setRemoveVideoUrl(false);
+                setVideoFile(event.target.files?.[0] || null);
+              }}
             />
+            <div className="admin-actions">
+              <button
+                className="btn btn-outline"
+                type="button"
+                onClick={() => {
+                  setVideoFile(null);
+                  setRemoveVideoUrl(true);
+                  setForm((current) => ({ ...current, videoUrl: "" }));
+                }}
+              >
+                إزالة الفيديو الحالي
+              </button>
+            </div>
             {videoFile ? <small className="admin-hint">تم اختيار ملف فيديو: {videoFile.name}</small> : null}
           </div>
 

@@ -9,6 +9,7 @@ export type Service = {
   imageUrl?: string | null;
   coverImage?: string | null;
   gallery?: string[] | null;
+  galleryDescriptions?: string[] | null;
   videoUrl?: string | null;
   isPublished?: boolean | null;
   createdAt?: string;
@@ -45,6 +46,7 @@ export type BlogPost = {
   coverImage?: string | null;
   published: boolean;
   createdAt: string;
+  updatedAt?: string;
 };
 
 export type Lead = {

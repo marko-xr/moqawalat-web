@@ -2,6 +2,7 @@ import "dotenv/config";
 import "express-async-errors";
 import express from "express";
 import cors from "cors";
+import compression from "compression";
 import helmet from "helmet";
 import morgan from "morgan";
 import rateLimit from "express-rate-limit";
@@ -15,6 +16,7 @@ import settingsRoutes from "./routes/settings.routes.js";
 import analyticsRoutes from "./routes/analytics.routes.js";
 
 export const app = express();
+app.set("trust proxy", 1);
 
 const allowedOrigins = new Set([
   process.env.WEB_URL || "http://localhost:3000",
@@ -40,6 +42,7 @@ app.use(
     crossOriginResourcePolicy: { policy: "cross-origin" }
   })
 );
+app.use(compression());
 app.use(express.json({ limit: "2mb" }));
 app.use(express.urlencoded({ extended: true }));
 app.use(morgan("combined"));
@@ -54,7 +57,17 @@ app.use(
   })
 );
 
-app.use("/uploads", express.static(path.resolve(process.cwd(), "uploads")));
+app.use(
+  "/uploads",
+  express.static(path.resolve(process.cwd(), "uploads"), {
+    maxAge: "30d",
+    immutable: true,
+    etag: true,
+    setHeaders: (res) => {
+      res.setHeader("Cache-Control", "public, max-age=2592000, immutable");
+    }
+  })
+);
 
 app.get("/", (_req, res) => {
   res.send("API is running");

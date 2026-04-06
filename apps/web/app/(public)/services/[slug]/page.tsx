@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { getServiceBySlug, getServices } from "@/lib/api";
 import { notFound } from "next/navigation";
+import Image from "next/image";
 
 export async function generateStaticParams() {
   const services = await getServices();
@@ -89,7 +90,14 @@ export default async function ServiceDetails({ params }: { params: Promise<{ slu
             <p className="lead">{service.shortDescAr}</p>
           </div>
           <div className="service-hero-media">
-            <img src={cover} alt={service.titleAr} loading="eager" fetchPriority="high" decoding="async" />
+            <Image
+              src={cover}
+              alt={service.titleAr}
+              width={1280}
+              height={853}
+              sizes="(max-width: 1024px) 100vw, 50vw"
+              priority
+            />
           </div>
         </div>
 
@@ -101,7 +109,13 @@ export default async function ServiceDetails({ params }: { params: Promise<{ slu
           <div className="service-gallery">
             {gallery.map((src, index) => (
               <div className="service-gallery-item" key={`${src}-${index}`}>
-                <img src={src} alt={`${service.titleAr} ${index + 1}`} loading="lazy" decoding="async" />
+                <Image
+                  src={src}
+                  alt={`${service.titleAr} ${index + 1}`}
+                  width={1000}
+                  height={750}
+                  sizes="(max-width: 1024px) 100vw, 50vw"
+                />
               </div>
             ))}
           </div>

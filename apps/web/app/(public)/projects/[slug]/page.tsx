@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import { notFound } from "next/navigation";
+import Image from "next/image";
 import { getProjectBySlug, getProjects } from "@/lib/api";
 
 export async function generateStaticParams() {
@@ -69,7 +70,14 @@ export default async function ProjectDetails({ params }: { params: Promise<{ slu
             </div>
           </div>
           <div className="project-hero-media">
-            <img src={cover} alt={project.titleAr} loading="eager" fetchPriority="high" decoding="async" />
+            <Image
+              src={cover}
+              alt={project.titleAr}
+              width={1280}
+              height={853}
+              sizes="(max-width: 1024px) 100vw, 50vw"
+              priority
+            />
           </div>
         </div>
 
@@ -78,13 +86,25 @@ export default async function ProjectDetails({ params }: { params: Promise<{ slu
             {project.beforeImage ? (
               <div className="project-before">
                 <span>قبل</span>
-                <img src={project.beforeImage} alt={`قبل - ${project.titleAr}`} loading="lazy" decoding="async" />
+                <Image
+                  src={project.beforeImage}
+                  alt={`قبل - ${project.titleAr}`}
+                  width={1100}
+                  height={733}
+                  sizes="(max-width: 1024px) 100vw, 50vw"
+                />
               </div>
             ) : null}
             {project.afterImage ? (
               <div className="project-after">
                 <span>بعد</span>
-                <img src={project.afterImage} alt={`بعد - ${project.titleAr}`} loading="lazy" decoding="async" />
+                <Image
+                  src={project.afterImage}
+                  alt={`بعد - ${project.titleAr}`}
+                  width={1100}
+                  height={733}
+                  sizes="(max-width: 1024px) 100vw, 50vw"
+                />
               </div>
             ) : null}
           </div>
@@ -94,7 +114,13 @@ export default async function ProjectDetails({ params }: { params: Promise<{ slu
           <div className="project-gallery">
             {gallery.map((src, index) => (
               <div className="project-gallery-item" key={`${src}-${index}`}>
-                <img src={src} alt={`${project.titleAr} ${index + 1}`} loading="lazy" decoding="async" />
+                <Image
+                  src={src}
+                  alt={`${project.titleAr} ${index + 1}`}
+                  width={1000}
+                  height={750}
+                  sizes="(max-width: 1024px) 100vw, 50vw"
+                />
               </div>
             ))}
           </div>

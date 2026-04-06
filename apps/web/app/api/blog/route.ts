@@ -4,6 +4,20 @@ import { NextResponse } from "next/server";
 const API_URL = process.env.API_URL || process.env.NEXT_PUBLIC_API_URL || "http://localhost:4000/api";
 const API_ORIGIN = API_URL.replace(/\/api\/?$/, "");
 
+type BlogListItem = {
+  id: string;
+  titleAr: string;
+  slug: string;
+  excerptAr: string;
+  contentAr: string;
+  seoTitleAr?: string | null;
+  seoDescriptionAr?: string | null;
+  coverImage?: string | null;
+  published: boolean;
+  createdAt: string;
+  updatedAt: string;
+};
+
 function normalizeMediaUrl(value?: string | null) {
   if (!value) {
     return value;
@@ -24,20 +38,19 @@ function normalizeMediaUrl(value?: string | null) {
   return value;
 }
 
-function filterItems(items: Array<{ titleAr?: string; slug?: string; shortDescAr?: string; isPublished?: boolean }>, q: string, published: string) {
+function filterItems(items: BlogListItem[], q: string, published: string) {
   const trimmed = q.trim().toLowerCase();
-  const filtered = items.filter((item) => {
+
+  return items.filter((item) => {
     const matchesQuery = trimmed
-      ? [item.titleAr, item.slug, item.shortDescAr].some((field) => field?.toLowerCase().includes(trimmed))
+      ? [item.titleAr, item.slug, item.excerptAr].some((field) => field?.toLowerCase().includes(trimmed))
       : true;
 
     const matchesPublished =
-      published === "true" ? item.isPublished === true : published === "false" ? item.isPublished === false : true;
+      published === "true" ? item.published === true : published === "false" ? item.published === false : true;
 
     return matchesQuery && matchesPublished;
   });
-
-  return filtered;
 }
 
 export async function GET(request: Request) {
@@ -53,7 +66,7 @@ export async function GET(request: Request) {
   const page = Math.max(Number(url.searchParams.get("page") || 1), 1);
   const pageSize = Math.max(Number(url.searchParams.get("pageSize") || 10), 1);
 
-  const response = await fetch(`${API_URL}/services/admin`, {
+  const response = await fetch(`${API_URL}/blog?all=true`, {
     method: "GET",
     cache: "no-store",
     headers: {
@@ -62,30 +75,15 @@ export async function GET(request: Request) {
   });
 
   if (!response.ok) {
-    return NextResponse.json({ message: "Failed to load services" }, { status: response.status });
+    return NextResponse.json({ message: "Failed to load blog posts" }, { status: response.status });
   }
 
-  const items = (await response.json()) as Array<{
-    id: string;
-    titleAr: string;
-    slug: string;
-    shortDescAr: string;
-    isPublished: boolean;
-    imageUrl?: string | null;
-    coverImage?: string | null;
-    gallery?: string[];
-    videoUrl?: string | null;
-  }>;
-
-  const normalized = items.map((item) => ({
+  const items = ((await response.json()) as BlogListItem[]).map((item) => ({
     ...item,
-    imageUrl: normalizeMediaUrl(item.imageUrl),
-    coverImage: normalizeMediaUrl(item.coverImage),
-    gallery: Array.isArray(item.gallery) ? item.gallery.map((media) => normalizeMediaUrl(media) || media) : item.gallery,
-    videoUrl: normalizeMediaUrl(item.videoUrl)
+    coverImage: normalizeMediaUrl(item.coverImage)
   }));
 
-  const filtered = filterItems(normalized, q, published);
+  const filtered = filterItems(items, q, published);
   const total = filtered.length;
   const totalPages = Math.max(Math.ceil(total / pageSize), 1);
   const safePage = Math.min(page, totalPages);
@@ -109,7 +107,7 @@ export async function POST(request: Request) {
 
   const formData = await request.formData();
 
-  const response = await fetch(`${API_URL}/services`, {
+  const response = await fetch(`${API_URL}/blog`, {
     method: "POST",
     cache: "no-store",
     headers: {

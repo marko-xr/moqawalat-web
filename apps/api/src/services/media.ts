@@ -57,11 +57,25 @@ function toBoolean(value: unknown): boolean | undefined {
 }
 
 async function uploadToCloudinary(file: Express.Multer.File, folder: string): Promise<string> {
+  const isImage = file.mimetype.toLowerCase().startsWith("image/");
+
   const response = await cloudinary.uploader.upload(file.path, {
     folder,
-    resource_type: "auto",
+    resource_type: isImage ? "image" : "auto",
     use_filename: true,
-    unique_filename: true
+    unique_filename: true,
+    ...(isImage
+      ? {
+          transformation: [
+            {
+              width: 1920,
+              crop: "limit",
+              fetch_format: "auto",
+              quality: "auto:good"
+            }
+          ]
+        }
+      : {})
   });
 
   await fs.unlink(file.path).catch(() => undefined);

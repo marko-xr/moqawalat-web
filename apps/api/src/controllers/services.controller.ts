@@ -34,6 +34,16 @@ function toSlug(value: string) {
     .replace(/^-+|-+$/g, "");
 }
 
+function normalizeDescriptions(values: string[], targetLength: number) {
+  const normalized = values.map((value) => value.trim()).slice(0, targetLength);
+
+  while (normalized.length < targetLength) {
+    normalized.push("");
+  }
+
+  return normalized;
+}
+
 export const serviceCreateValidation = [
   body("titleAr").isLength({ min: 3 }),
   body("slug")
@@ -121,6 +131,9 @@ export async function createService(req: Request, res: Response) {
   const uploadedVideo = await uploadMediaFile(videoFile, "moqawalat/services");
 
   const gallery = [...parseGallery(req.body.gallery), ...uploadedGallery];
+  const existingDescriptions = normalizeDescriptions(parseGallery(req.body.galleryDescriptions), parseGallery(req.body.gallery).length);
+  const newDescriptions = normalizeDescriptions(parseGallery(req.body.newGalleryDescriptions), uploadedGallery.length);
+  const galleryDescriptions = [...existingDescriptions, ...newDescriptions];
   const normalizedInputSlug = toSlug(String(req.body.slug || ""));
   const rawSlug = normalizedInputSlug || toSlug(String(req.body.titleAr || ""));
   const slug = rawSlug || `service-${Date.now()}`;
@@ -136,6 +149,7 @@ export async function createService(req: Request, res: Response) {
       imageUrl: req.body.imageUrl || null,
       coverImage: coverImage || req.body.coverImage || null,
       gallery,
+      galleryDescriptions,
       videoUrl: uploadedVideo || req.body.videoUrl || null,
       isPublished: typeof isPublished === "boolean" ? isPublished : true
     };
@@ -154,11 +168,23 @@ export async function updateService(req: Request, res: Response) {
   const uploadedGallery = await uploadMediaFiles(galleryFiles, "moqawalat/services");
   const uploadedVideo = await uploadMediaFile(videoFile, "moqawalat/services");
 
-  const gallery = [...parseGallery(req.body.gallery), ...uploadedGallery];
+  const existingGallery = parseGallery(req.body.gallery);
+  const gallery = [...existingGallery, ...uploadedGallery];
+  const existingDescriptions = normalizeDescriptions(parseGallery(req.body.galleryDescriptions), existingGallery.length);
+  const newDescriptions = normalizeDescriptions(parseGallery(req.body.newGalleryDescriptions), uploadedGallery.length);
+  const galleryDescriptions = [...existingDescriptions, ...newDescriptions];
   const isPublished = parseBoolean(req.body.isPublished);
+  const removeCoverImage = parseBoolean(req.body.removeCoverImage) === true;
+  const removeVideo = parseBoolean(req.body.removeVideoUrl) === true;
+  const hasGalleryField = typeof req.body.gallery !== "undefined";
+  const hasGalleryDescriptionsField = typeof req.body.galleryDescriptions !== "undefined";
   const imageUrl = typeof req.body.imageUrl === "string" && req.body.imageUrl.length > 0 ? req.body.imageUrl : undefined;
-  const coverValue = coverImage || (typeof req.body.coverImage === "string" && req.body.coverImage.length > 0 ? req.body.coverImage : undefined);
-  const videoValue = uploadedVideo || (typeof req.body.videoUrl === "string" && req.body.videoUrl.length > 0 ? req.body.videoUrl : undefined);
+  const coverValue = removeCoverImage
+    ? null
+    : coverImage || (typeof req.body.coverImage === "string" ? req.body.coverImage.trim() || null : undefined);
+  const videoValue = removeVideo
+    ? null
+    : uploadedVideo || (typeof req.body.videoUrl === "string" ? req.body.videoUrl.trim() || null : undefined);
 
     const normalizedUpdateSlug = toSlug(String(req.body.slug || ""));
 
@@ -171,7 +197,8 @@ export async function updateService(req: Request, res: Response) {
       seoDescriptionAr: req.body.seoDescriptionAr || null,
       imageUrl,
       coverImage: coverValue,
-      gallery: gallery.length ? gallery : undefined,
+      gallery: hasGalleryField ? gallery : undefined,
+      galleryDescriptions: hasGalleryDescriptionsField ? galleryDescriptions : undefined,
       videoUrl: videoValue,
       isPublished: typeof isPublished === "boolean" ? isPublished : undefined
     };

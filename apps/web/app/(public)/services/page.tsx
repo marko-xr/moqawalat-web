@@ -1,10 +1,12 @@
 import type { Metadata } from "next";
 import ServiceCard from "@/components/ServiceCard";
 import { getServices } from "@/lib/api";
+import { SEO_KEYWORDS } from "@/lib/seo";
 
 export const metadata: Metadata = {
   title: "الخدمات",
   description: "اكتشف خدماتنا في الدهانات والعزل والأعمال الحديدية والجبس والديكور بالدمام.",
+  keywords: SEO_KEYWORDS.services,
   alternates: { canonical: "/services" }
 };
 

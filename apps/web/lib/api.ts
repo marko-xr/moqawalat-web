@@ -1,6 +1,14 @@
 const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:4000/api";
 const REQUEST_TIMEOUT_MS = 8000;
+const DEFAULT_REVALIDATE_SECONDS = 120;
 const API_ORIGIN = API_URL.replace(/\/api\/?$/, "");
+
+type NextFetchInit = RequestInit & {
+  next?: {
+    revalidate?: number | false;
+    tags?: string[];
+  };
+};
 
 function normalizeMediaUrl(value?: string | null) {
   if (!value) {
@@ -41,19 +49,41 @@ function normalizeProject(project: any) {
   };
 }
 
+function normalizeBlogPost(post: any) {
+  return {
+    ...post,
+    coverImage: normalizeMediaUrl(post?.coverImage)
+  };
+}
+
 async function request<T>(path: string, init?: RequestInit): Promise<T> {
   const controller = new AbortController();
   const timeoutId = setTimeout(() => controller.abort(), REQUEST_TIMEOUT_MS);
 
-  const res = await fetch(`${API_URL}${path}`, {
+  const method = (init?.method || "GET").toUpperCase();
+  const isGetRequest = method === "GET";
+  const normalizedInit = init as NextFetchInit | undefined;
+
+  const requestInit: NextFetchInit = {
     ...init,
     signal: controller.signal,
-    cache: "no-store",
     headers: {
       "Content-Type": "application/json",
       ...(init?.headers || {})
     }
-  }).finally(() => clearTimeout(timeoutId));
+  };
+
+  if (isGetRequest) {
+    requestInit.cache = init?.cache ?? "force-cache";
+    requestInit.next = {
+      revalidate: DEFAULT_REVALIDATE_SECONDS,
+      ...(normalizedInit?.next || {})
+    };
+  } else {
+    requestInit.cache = "no-store";
+  }
+
+  const res = await fetch(`${API_URL}${path}`, requestInit).finally(() => clearTimeout(timeoutId));
 
   if (!res.ok) {
     throw new Error(`API error: ${res.status}`);
@@ -100,7 +130,8 @@ export async function getProjectBySlug(slug: string) {
 
 export async function getBlogPosts() {
   try {
-    return await request<any[]>("/blog");
+    const posts = await request<any[]>("/blog");
+    return posts.map((post) => normalizeBlogPost(post));
   } catch {
     return [];
   }
@@ -108,7 +139,8 @@ export async function getBlogPosts() {
 
 export async function getBlogBySlug(slug: string) {
   try {
-    return await request<any>(`/blog/${slug}`);
+    const post = await request<any>(`/blog/${slug}`);
+    return normalizeBlogPost(post);
   } catch {
     return null;
   }

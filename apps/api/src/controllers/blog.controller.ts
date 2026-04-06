@@ -1,12 +1,53 @@
 import type { Request, Response } from "express";
 import { body } from "express-validator";
 import { prisma } from "../services/prisma.js";
+import { parseBoolean, uploadMediaFile } from "../services/media.js";
+
+function isOptionalValidUrl(value: unknown) {
+  if (value === undefined || value === null) {
+    return true;
+  }
+
+  const raw = String(value).trim();
+
+  if (!raw) {
+    return true;
+  }
+
+  try {
+    const parsed = new URL(raw);
+    return parsed.protocol === "http:" || parsed.protocol === "https:";
+  } catch {
+    return false;
+  }
+}
+
+function toSlug(value: string) {
+  return value
+    .trim()
+    .toLowerCase()
+    .replace(/\s+/g, "-")
+    .replace(/[^a-z0-9-]/g, "")
+    .replace(/-+/g, "-")
+    .replace(/^-+|-+$/g, "");
+}
 
 export const blogValidation = [
   body("titleAr").isLength({ min: 3 }),
-  body("slug").isSlug(),
+  body("slug")
+    .optional({ values: "falsy" })
+    .custom((value) => {
+      if (value === undefined || value === null || String(value).trim() === "") {
+        return true;
+      }
+      return /^[-a-z0-9]+$/.test(String(value).trim().toLowerCase());
+    }),
   body("excerptAr").isLength({ min: 10 }),
-  body("contentAr").isLength({ min: 50 })
+  body("contentAr").isLength({ min: 50 }),
+  body("seoTitleAr").optional().isString().isLength({ max: 160 }),
+  body("seoDescriptionAr").optional().isString().isLength({ max: 300 }),
+  body("coverImage").custom((value) => isOptionalValidUrl(value)).withMessage("Invalid cover image URL"),
+  body("published").optional().isBoolean().toBoolean()
 ];
 
 export async function getBlogPosts(req: Request, res: Response) {
@@ -31,14 +72,50 @@ export async function getBlogBySlug(req: Request, res: Response) {
 }
 
 export async function createBlogPost(req: Request, res: Response) {
-  const post = await prisma.blogPost.create({ data: req.body });
+  const files = req.files as Record<string, Express.Multer.File[]> | undefined;
+  const coverFile = files?.coverImage?.[0];
+  const uploadedCover = await uploadMediaFile(coverFile, "moqawalat/blog");
+  const normalizedSlug = toSlug(String(req.body.slug || "")) || toSlug(String(req.body.titleAr || "")) || `blog-${Date.now()}`;
+  const published = parseBoolean(req.body.published);
+
+  const post = await prisma.blogPost.create({
+    data: {
+      titleAr: req.body.titleAr,
+      slug: normalizedSlug,
+      excerptAr: req.body.excerptAr,
+      contentAr: req.body.contentAr,
+      seoTitleAr: req.body.seoTitleAr || null,
+      seoDescriptionAr: req.body.seoDescriptionAr || null,
+      coverImage: uploadedCover || req.body.coverImage || null,
+      published: typeof published === "boolean" ? published : true
+    }
+  });
+
   return res.status(201).json(post);
 }
 
 export async function updateBlogPost(req: Request, res: Response) {
+  const files = req.files as Record<string, Express.Multer.File[]> | undefined;
+  const coverFile = files?.coverImage?.[0];
+  const uploadedCover = await uploadMediaFile(coverFile, "moqawalat/blog");
+  const published = parseBoolean(req.body.published);
+  const removeCoverImage = parseBoolean(req.body.removeCoverImage) === true;
+  const slug = toSlug(String(req.body.slug || ""));
+
   const post = await prisma.blogPost.update({
     where: { id: req.params.id },
-    data: req.body
+    data: {
+      titleAr: req.body.titleAr,
+      slug: slug || undefined,
+      excerptAr: req.body.excerptAr,
+      contentAr: req.body.contentAr,
+      seoTitleAr: req.body.seoTitleAr || null,
+      seoDescriptionAr: req.body.seoDescriptionAr || null,
+      coverImage: removeCoverImage
+        ? null
+        : uploadedCover || (typeof req.body.coverImage === "string" ? req.body.coverImage.trim() || null : undefined),
+      published: typeof published === "boolean" ? published : undefined
+    }
   });
 
   return res.json(post);

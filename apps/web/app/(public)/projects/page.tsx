@@ -1,10 +1,13 @@
 import type { Metadata } from "next";
 import Link from "next/link";
+import Image from "next/image";
 import { getProjects } from "@/lib/api";
+import { LOCAL_AREAS, SEO_KEYWORDS } from "@/lib/seo";
 
 export const metadata: Metadata = {
   title: "المشاريع",
   description: "مشاريع قبل وبعد في الدهانات والعزل والأعمال الحديدية والديكور بالمنطقة الشرقية.",
+  keywords: [...SEO_KEYWORDS.global, ...LOCAL_AREAS.map((area) => `مشاريع مقاولات ${area}`)],
   alternates: { canonical: "/projects" }
 };
 
@@ -20,12 +23,13 @@ export default async function ProjectsPage() {
             <article key={project.id} className="card">
               <Link href={`/projects/${project.slug}`} className="project-card-link">
                 <div className="project-card-media">
-                  <img
+                  <Image
                     src={project.coverImage || project.afterImage || project.beforeImage || "/images/placeholder-after.svg"}
                     alt={project.titleAr}
                     className="img-full"
-                    loading="lazy"
-                    decoding="async"
+                    width={900}
+                    height={600}
+                    sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw"
                   />
                 </div>
                 <h3>{project.titleAr}</h3>

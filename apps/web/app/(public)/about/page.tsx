@@ -1,8 +1,10 @@
 import type { Metadata } from "next";
+import { LOCAL_AREAS, SEO_KEYWORDS } from "@/lib/seo";
 
 export const metadata: Metadata = {
   title: "من نحن",
   description: "تعرف على شركة مقاولات عامة الدمام وخبرتنا في تنفيذ المشاريع بالمنطقة الشرقية.",
+  keywords: [...SEO_KEYWORDS.global, ...LOCAL_AREAS.map((area) => `مقاول معتمد ${area}`)],
   alternates: { canonical: "/about" }
 };
 

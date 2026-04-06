@@ -33,6 +33,18 @@ const navItems = [
         <path d="M8 14l2.5-2.5L14 15l2-2 4 6" />
       </svg>
     )
+  },
+  {
+    href: "/admin/blog",
+    label: "المدونة",
+    icon: (
+      <svg viewBox="0 0 24 24" aria-hidden="true">
+        <path d="M5 5h14v14H5z" />
+        <path d="M8 9h8" />
+        <path d="M8 13h8" />
+        <path d="M8 17h5" />
+      </svg>
+    )
   }
 ];
 

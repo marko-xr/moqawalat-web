@@ -1,13 +1,15 @@
 import Link from "next/link";
+import Image from "next/image";
 import type { Metadata } from "next";
 import QuoteForm from "@/components/QuoteForm";
 import ServiceCard from "@/components/ServiceCard";
 import { getServices, getProjects } from "@/lib/api";
+import { HOMEPAGE_SEO_DESCRIPTION, LOCAL_AREAS, SEO_KEYWORDS } from "@/lib/seo";
 
 export const metadata: Metadata = {
-  title: "مقاولات عامة بالدمام - دهانات، عزل، حديد، جبس",
-  description:
-    "شركة مقاولات عامة بالدمام تقدم خدمات الدهانات وعزل الأسطح والأعمال الحديدية والجبس والديكورات مع تنفيذ سريع وضمان جودة.",
+  title: "مقاولات عامة بالدمام | دهانات، عزل أسطح، مظلات وسواتر، جبس وديكور",
+  description: HOMEPAGE_SEO_DESCRIPTION,
+  keywords: [...SEO_KEYWORDS.global, ...SEO_KEYWORDS.services],
   alternates: { canonical: "/" }
 };
 
@@ -23,7 +25,7 @@ export default async function HomePage() {
     "@context": "https://schema.org",
     "@type": "LocalBusiness",
     name: settings.name,
-    areaServed: ["الدمام", "الخبر", "الظهران"],
+    areaServed: LOCAL_AREAS,
     telephone: `+${settings.phone}`,
     url: process.env.NEXT_PUBLIC_SITE_URL || "http://localhost:3000",
     sameAs: [`https://wa.me/${settings.wa}`],
@@ -54,12 +56,14 @@ export default async function HomePage() {
               فريق متخصص لخدمة عملاء المنطقة الشرقية. تنفيذ احترافي، التزام بالمواعيد، وأسعار واضحة.
             </p>
             <div className="hero-main-image-wrap">
-              <img
+              <Image
                 src="/images/main-image.webp"
                 alt="صورة رئيسية لخدمات مقاولات عامة الدمام"
                 className="hero-main-image"
-                loading="eager"
-                decoding="async"
+                width={1400}
+                height={900}
+                sizes="(max-width: 1024px) 100vw, 60vw"
+                priority
               />
             </div>
             <div className="action-row">
@@ -118,6 +122,22 @@ export default async function HomePage() {
           <div className="grid grid-services">
             {services.slice(0, 6).map((service) => (
               <ServiceCard key={service.id} service={service} />
+            ))}
+          </div>
+        </div>
+      </section>
+
+      <section className="section section-compact-top">
+        <div className="container">
+          <h2>خدمات يبحث عنها العملاء في الدمام والمنطقة الشرقية</h2>
+          <p className="seo-intro">
+            نوفر أعمال دهان وعزل ومظلات وسواتر وجبس وديكور وترميم في الدمام والخبر والظهران والقطيف مع معاينة سريعة.
+          </p>
+          <div className="seo-keywords-grid" aria-label="الكلمات المفتاحية المحلية للخدمات">
+            {SEO_KEYWORDS.services.slice(0, 16).map((keyword) => (
+              <span key={keyword} className="seo-keyword-chip">
+                {keyword}
+              </span>
             ))}
           </div>
         </div>
