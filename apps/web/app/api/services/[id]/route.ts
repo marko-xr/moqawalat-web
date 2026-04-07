@@ -3,11 +3,63 @@ import { NextResponse } from "next/server";
 
 const API_URL = process.env.API_URL || process.env.NEXT_PUBLIC_API_URL || "http://localhost:4000/api";
 
+type ProxyErrorPayload = {
+  message?: string;
+  code?: string;
+  errors?: Array<{ msg?: string; path?: string; param?: string }>;
+};
+
+async function readProxyErrorPayload(response: Response): Promise<ProxyErrorPayload> {
+  const text = await response.text();
+
+  if (!text) {
+    return {};
+  }
+
+  try {
+    return JSON.parse(text) as ProxyErrorPayload;
+  } catch {
+    return { message: text.slice(0, 500) };
+  }
+}
+
+function fallbackMessageByStatus(status: number) {
+  if (status === 401 || status === 403) {
+    return "غير مصرح. يرجى تسجيل الدخول مرة أخرى.";
+  }
+
+  if (status === 404) {
+    return "الخدمة غير موجودة.";
+  }
+
+  if (status === 409) {
+    return "تم اكتشاف قيمة مكررة. قد يكون رابط الخدمة (slug) مستخدما بالفعل.";
+  }
+
+  if (status === 413) {
+    return "حجم الملف المرفوع كبير جدا.";
+  }
+
+  if (status === 415) {
+    return "نوع الملف غير مدعوم.";
+  }
+
+  if (status === 422) {
+    return "فشل التحقق من البيانات. يرجى مراجعة الحقول المطلوبة.";
+  }
+
+  if (status >= 500) {
+    return "حدث خطأ في الخادم أثناء تحديث الخدمة.";
+  }
+
+  return "تعذر تحديث الخدمة.";
+}
+
 export async function PUT(request: Request, context: { params: Promise<{ id: string }> }) {
   const token = (await cookies()).get("admin_token")?.value;
 
   if (!token) {
-    return NextResponse.json({ message: "Unauthorized" }, { status: 401 });
+    return NextResponse.json({ message: "غير مصرح" }, { status: 401 });
   }
 
   const { id } = await context.params;
@@ -22,10 +74,16 @@ export async function PUT(request: Request, context: { params: Promise<{ id: str
     body: formData
   });
 
-  const payload = await response.json().catch(() => ({}));
+  const payload = await readProxyErrorPayload(response);
 
   if (!response.ok) {
-    return NextResponse.json(payload, { status: response.status });
+    return NextResponse.json(
+      {
+        ...payload,
+        message: payload.message || fallbackMessageByStatus(response.status)
+      },
+      { status: response.status }
+    );
   }
 
   return NextResponse.json(payload, { status: response.status });
@@ -35,7 +93,7 @@ export async function DELETE(_request: Request, context: { params: Promise<{ id:
   const token = (await cookies()).get("admin_token")?.value;
 
   if (!token) {
-    return NextResponse.json({ message: "Unauthorized" }, { status: 401 });
+    return NextResponse.json({ message: "غير مصرح" }, { status: 401 });
   }
 
   const { id } = await context.params;
@@ -49,8 +107,14 @@ export async function DELETE(_request: Request, context: { params: Promise<{ id:
   });
 
   if (!response.ok) {
-    const payload = await response.json().catch(() => ({}));
-    return NextResponse.json(payload, { status: response.status });
+    const payload = await readProxyErrorPayload(response);
+    return NextResponse.json(
+      {
+        ...payload,
+        message: payload.message || (response.status === 404 ? "الخدمة غير موجودة." : "تعذر حذف الخدمة.")
+      },
+      { status: response.status }
+    );
   }
 
   return NextResponse.json({ success: true });

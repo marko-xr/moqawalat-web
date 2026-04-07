@@ -4,6 +4,54 @@ import { NextResponse } from "next/server";
 const API_URL = process.env.API_URL || process.env.NEXT_PUBLIC_API_URL || "http://localhost:4000/api";
 const API_ORIGIN = API_URL.replace(/\/api\/?$/, "");
 
+type ProxyErrorPayload = {
+  message?: string;
+  code?: string;
+  errors?: Array<{ msg?: string; path?: string; param?: string }>;
+};
+
+async function readProxyErrorPayload(response: Response): Promise<ProxyErrorPayload> {
+  const text = await response.text();
+
+  if (!text) {
+    return {};
+  }
+
+  try {
+    return JSON.parse(text) as ProxyErrorPayload;
+  } catch {
+    return { message: text.slice(0, 500) };
+  }
+}
+
+function fallbackMessageByStatus(status: number) {
+  if (status === 401 || status === 403) {
+    return "غير مصرح. يرجى تسجيل الدخول مرة أخرى.";
+  }
+
+  if (status === 409) {
+    return "تم اكتشاف قيمة مكررة. قد يكون رابط الخدمة (slug) مستخدما بالفعل.";
+  }
+
+  if (status === 413) {
+    return "حجم الملف المرفوع كبير جدا.";
+  }
+
+  if (status === 415) {
+    return "نوع الملف غير مدعوم.";
+  }
+
+  if (status === 422) {
+    return "فشل التحقق من البيانات. يرجى مراجعة الحقول المطلوبة.";
+  }
+
+  if (status >= 500) {
+    return "حدث خطأ في الخادم أثناء حفظ الخدمة.";
+  }
+
+  return "تعذر حفظ الخدمة.";
+}
+
 function normalizeMediaUrl(value?: string | null) {
   if (!value) {
     return value;
@@ -44,7 +92,7 @@ export async function GET(request: Request) {
   const token = (await cookies()).get("admin_token")?.value;
 
   if (!token) {
-    return NextResponse.json({ message: "Unauthorized" }, { status: 401 });
+    return NextResponse.json({ message: "غير مصرح" }, { status: 401 });
   }
 
   const url = new URL(request.url);
@@ -62,7 +110,7 @@ export async function GET(request: Request) {
   });
 
   if (!response.ok) {
-    return NextResponse.json({ message: "Failed to load services" }, { status: response.status });
+    return NextResponse.json({ message: "تعذر تحميل الخدمات" }, { status: response.status });
   }
 
   const items = (await response.json()) as Array<{
@@ -104,7 +152,7 @@ export async function POST(request: Request) {
   const token = (await cookies()).get("admin_token")?.value;
 
   if (!token) {
-    return NextResponse.json({ message: "Unauthorized" }, { status: 401 });
+    return NextResponse.json({ message: "غير مصرح" }, { status: 401 });
   }
 
   const formData = await request.formData();
@@ -118,10 +166,16 @@ export async function POST(request: Request) {
     body: formData
   });
 
-  const payload = await response.json().catch(() => ({}));
+  const payload = await readProxyErrorPayload(response);
 
   if (!response.ok) {
-    return NextResponse.json(payload, { status: response.status });
+    return NextResponse.json(
+      {
+        ...payload,
+        message: payload.message || fallbackMessageByStatus(response.status)
+      },
+      { status: response.status }
+    );
   }
 
   return NextResponse.json(payload, { status: response.status });

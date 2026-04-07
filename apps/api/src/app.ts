@@ -7,6 +7,7 @@ import helmet from "helmet";
 import morgan from "morgan";
 import rateLimit from "express-rate-limit";
 import path from "node:path";
+import multer from "multer";
 import authRoutes from "./routes/auth.routes.js";
 import servicesRoutes from "./routes/services.routes.js";
 import projectsRoutes from "./routes/projects.routes.js";
@@ -108,5 +109,24 @@ app.use("/api/analytics", analyticsRoutes);
 
 app.use((err: Error, _req: express.Request, res: express.Response, _next: express.NextFunction) => {
   console.error("API error:", err);
-  return res.status(500).json({ message: err.message || "Unexpected server error" });
+
+  if (err instanceof multer.MulterError) {
+    if (err.code === "LIMIT_FILE_SIZE") {
+      return res.status(413).json({
+        message: "حجم الملف كبير جدا. الحد الأقصى المسموح 25MB لكل ملف.",
+        code: "FILE_TOO_LARGE"
+      });
+    }
+
+    return res.status(400).json({ message: err.message || "بيانات الرفع غير صحيحة", code: err.code });
+  }
+
+  if (err.message === "Unsupported file type") {
+    return res.status(415).json({
+      message: "نوع الملف غير مدعوم. الأنواع المسموحة: الصور و mp4 و webm و mov.",
+      code: "UNSUPPORTED_FILE_TYPE"
+    });
+  }
+
+  return res.status(500).json({ message: err.message || "حدث خطأ غير متوقع في الخادم" });
 });

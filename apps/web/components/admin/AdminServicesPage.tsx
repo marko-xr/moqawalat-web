@@ -52,6 +52,93 @@ function formatDate(value?: string) {
   return new Date(value).toLocaleDateString("ar-SA");
 }
 
+type ApiValidationError = {
+  msg?: string;
+  path?: string;
+  param?: string;
+};
+
+type ApiErrorPayload = {
+  message?: string;
+  code?: string;
+  errors?: ApiValidationError[];
+};
+
+const FIELD_LABELS: Record<string, string> = {
+  titleAr: "عنوان الخدمة",
+  slug: "الرابط",
+  shortDescAr: "الوصف المختصر",
+  contentAr: "الوصف الكامل",
+  seoTitleAr: "SEO Title",
+  seoDescriptionAr: "SEO Description",
+  videoUrl: "رابط الفيديو",
+  isPublished: "حالة النشر",
+  coverImage: "صورة الغلاف",
+  gallery: "معرض الصور"
+};
+
+async function parseApiErrorResponse(response: Response): Promise<ApiErrorPayload> {
+  const text = await response.text();
+
+  if (!text) {
+    return {};
+  }
+
+  try {
+    return JSON.parse(text) as ApiErrorPayload;
+  } catch {
+    return { message: text.slice(0, 500) };
+  }
+}
+
+function formatValidationErrors(errors: ApiValidationError[] | undefined) {
+  if (!Array.isArray(errors) || errors.length === 0) {
+    return [];
+  }
+
+  return errors
+    .map((item) => {
+      const fieldKey = item.path || item.param || "";
+      const label = FIELD_LABELS[fieldKey] || fieldKey;
+      const message = item.msg || "قيمة غير صحيحة";
+      return label ? `${message} (${label})` : message;
+    })
+    .filter(Boolean);
+}
+
+function buildSaveErrorMessage(status: number, payload: ApiErrorPayload) {
+  const validationMessages = formatValidationErrors(payload.errors);
+  if (validationMessages.length > 0) {
+    return `تحقق من الحقول التالية: ${validationMessages.join(" | ")}`;
+  }
+
+  if (payload.message) {
+    return payload.message;
+  }
+
+  if (status === 401 || status === 403) {
+    return "انتهت جلسة الدخول أو لا توجد صلاحية. أعد تسجيل الدخول ثم حاول مرة أخرى.";
+  }
+
+  if (status === 409) {
+    return "لا يمكن الحفظ لأن الرابط (slug) مستخدم بالفعل. غيّر الرابط وحاول مرة أخرى.";
+  }
+
+  if (status === 413) {
+    return "حجم الملف كبير جدا. الحد الأقصى 25MB لكل ملف.";
+  }
+
+  if (status === 415) {
+    return "نوع الملف غير مدعوم. المسموح: صور + mp4/webm/mov.";
+  }
+
+  if (status >= 500) {
+    return "تعذر حفظ الخدمة. الأسباب المحتملة: تعارض في الرابط، خطأ في قاعدة البيانات، أو مشكلة في رفع الملفات. راجع سجلات API لمعرفة السبب الدقيق.";
+  }
+
+  return "تعذر حفظ الخدمة. تحقق من البيانات المدخلة وحاول مرة أخرى.";
+}
+
 export default function AdminServicesPage() {
   const [items, setItems] = useState<Service[]>([]);
   const [total, setTotal] = useState(0);
@@ -189,64 +276,60 @@ export default function AdminServicesPage() {
     setNotice("");
     setError("");
 
-    const payload = new FormData();
-    payload.append("titleAr", form.titleAr);
-    payload.append("slug", form.slug || toSlug(form.titleAr));
-    payload.append("shortDescAr", form.shortDescAr);
-    payload.append("contentAr", form.contentAr);
-    payload.append("seoTitleAr", form.seoTitleAr);
-    payload.append("seoDescriptionAr", form.seoDescriptionAr);
-    payload.append("videoUrl", form.videoUrl);
-    payload.append("isPublished", String(form.isPublished));
-    payload.append("gallery", JSON.stringify(form.gallery));
-    payload.append("galleryDescriptions", JSON.stringify(form.galleryDescriptions));
-    payload.append("newGalleryDescriptions", JSON.stringify(newGalleryDescriptions));
+    try {
+      const formData = new FormData();
+      formData.append("titleAr", form.titleAr);
+      formData.append("slug", form.slug || toSlug(form.titleAr));
+      formData.append("shortDescAr", form.shortDescAr);
+      formData.append("contentAr", form.contentAr);
+      formData.append("seoTitleAr", form.seoTitleAr);
+      formData.append("seoDescriptionAr", form.seoDescriptionAr);
+      formData.append("videoUrl", form.videoUrl);
+      formData.append("isPublished", String(form.isPublished));
+      formData.append("gallery", JSON.stringify(form.gallery));
+      formData.append("galleryDescriptions", JSON.stringify(form.galleryDescriptions));
+      formData.append("newGalleryDescriptions", JSON.stringify(newGalleryDescriptions));
 
-    if (removeCoverImage) {
-      payload.append("removeCoverImage", "true");
-    } else if (form.coverImage && !coverFile) {
-      payload.append("coverImage", form.coverImage);
+      if (removeCoverImage) {
+        formData.append("removeCoverImage", "true");
+      } else if (form.coverImage && !coverFile) {
+        formData.append("coverImage", form.coverImage);
+      }
+
+      if (coverFile) {
+        formData.append("coverImage", coverFile);
+      }
+
+      if (removeVideoUrl) {
+        formData.append("removeVideoUrl", "true");
+      }
+
+      if (videoFile) {
+        formData.append("video", videoFile);
+      }
+
+      galleryFiles.forEach((file) => formData.append("gallery", file));
+
+      const endpoint = form.id ? `/api/services/${form.id}` : "/api/services";
+      const method = form.id ? "PUT" : "POST";
+
+      const response = await fetch(endpoint, {
+        method,
+        body: formData
+      });
+
+      if (!response.ok) {
+        const errorPayload = await parseApiErrorResponse(response);
+        setError(buildSaveErrorMessage(response.status, errorPayload));
+        return;
+      }
+
+      setNotice("تم حفظ الخدمة");
+      resetForm();
+      loadServices();
+    } catch {
+      setError("تعذر الاتصال بالخادم أثناء حفظ الخدمة. تحقق من اتصال الشبكة ثم حاول مرة أخرى.");
     }
-
-    if (coverFile) {
-      payload.append("coverImage", coverFile);
-    }
-
-    if (removeVideoUrl) {
-      payload.append("removeVideoUrl", "true");
-    }
-
-    if (videoFile) {
-      payload.append("video", videoFile);
-    }
-
-    galleryFiles.forEach((file) => payload.append("gallery", file));
-
-    const endpoint = form.id ? `/api/services/${form.id}` : "/api/services";
-    const method = form.id ? "PUT" : "POST";
-
-    const response = await fetch(endpoint, {
-      method,
-      body: payload
-    });
-
-    if (!response.ok) {
-      const payload = await response.json().catch(() => ({})) as {
-        message?: string;
-        errors?: Array<{ msg?: string; path?: string; param?: string }>;
-      };
-
-      const firstError = payload?.errors?.[0];
-      const fieldName = firstError?.path || firstError?.param;
-      const message = firstError?.msg || payload?.message || "تعذر حفظ الخدمة";
-
-      setError(fieldName ? `${message} (${fieldName})` : message);
-      return;
-    }
-
-    setNotice("تم حفظ الخدمة");
-    resetForm();
-    loadServices();
   }
 
   async function handleDelete() {

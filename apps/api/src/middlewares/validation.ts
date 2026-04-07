@@ -6,7 +6,7 @@ export function validateRequest(req: Request, res: Response, next: NextFunction)
 
   if (!errors.isEmpty()) {
     return res.status(422).json({
-      message: "Validation failed",
+      message: "فشل التحقق من البيانات",
       errors: errors.array()
     });
   }

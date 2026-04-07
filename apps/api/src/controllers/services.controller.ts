@@ -87,6 +87,36 @@ function appendEmptyGalleryDescriptions<T extends { gallery: string[] }>(service
   };
 }
 
+function mapServiceMutationError(error: unknown) {
+  if (error instanceof Prisma.PrismaClientKnownRequestError) {
+    if (error.code === "P2002") {
+      const target = Array.isArray((error.meta as { target?: string[] } | undefined)?.target)
+        ? (error.meta as { target: string[] }).target.join(",")
+        : String((error.meta as { target?: string } | undefined)?.target || "");
+
+      if (target.includes("slug")) {
+        return { status: 409, message: "الرابط (slug) مستخدم بالفعل. يرجى اختيار رابط مختلف.", code: "SERVICE_SLUG_EXISTS" };
+      }
+
+      return { status: 409, message: "توجد خدمة أخرى بنفس القيمة الفريدة.", code: "SERVICE_DUPLICATE" };
+    }
+
+    if (error.code === "P2000") {
+      return { status: 400, message: "أحد الحقول أطول من الحد المسموح.", code: "SERVICE_FIELD_TOO_LONG" };
+    }
+
+    if (error.code === "P2025") {
+      return { status: 404, message: "الخدمة غير موجودة.", code: "SERVICE_NOT_FOUND" };
+    }
+  }
+
+  if (error instanceof Prisma.PrismaClientValidationError) {
+    return { status: 400, message: "بيانات الخدمة غير صحيحة.", code: "SERVICE_INVALID_PAYLOAD" };
+  }
+
+  return null;
+}
+
 export const serviceCreateValidation = [
   body("titleAr").isLength({ min: 3 }),
   body("slug")
@@ -102,12 +132,12 @@ export const serviceCreateValidation = [
 
       return slugPattern.test(normalized);
     })
-    .withMessage("Invalid slug format"),
+    .withMessage("صيغة الرابط (slug) غير صحيحة"),
   body("shortDescAr").isLength({ min: 10 }),
   body("contentAr").isLength({ min: 20 }),
   body("seoTitleAr").optional().isString().isLength({ max: 160 }),
   body("seoDescriptionAr").optional().isString().isLength({ max: 300 }),
-  body("videoUrl").custom((value) => isOptionalValidUrl(value)).withMessage("Invalid video URL"),
+  body("videoUrl").custom((value) => isOptionalValidUrl(value)).withMessage("رابط الفيديو غير صحيح"),
   body("isPublished").optional().isBoolean().toBoolean()
 ];
 
@@ -126,12 +156,12 @@ export const serviceUpdateValidation = [
 
       return slugPattern.test(normalized);
     })
-    .withMessage("Invalid slug format"),
+    .withMessage("صيغة الرابط (slug) غير صحيحة"),
   body("shortDescAr").optional().isLength({ min: 10 }),
   body("contentAr").optional().isLength({ min: 20 }),
   body("seoTitleAr").optional().isString().isLength({ max: 160 }),
   body("seoDescriptionAr").optional().isString().isLength({ max: 300 }),
-  body("videoUrl").custom((value) => isOptionalValidUrl(value)).withMessage("Invalid video URL"),
+  body("videoUrl").custom((value) => isOptionalValidUrl(value)).withMessage("رابط الفيديو غير صحيح"),
   body("isPublished").optional().isBoolean().toBoolean()
 ];
 
@@ -203,36 +233,37 @@ export async function getServiceBySlug(req: Request, res: Response) {
   }
 
   if (!serviceData) {
-    return res.status(404).json({ message: "Service not found" });
+    return res.status(404).json({ message: "الخدمة غير موجودة" });
   }
 
   if (serviceData.isPublished === false) {
-    return res.status(404).json({ message: "Service not found" });
+    return res.status(404).json({ message: "الخدمة غير موجودة" });
   }
 
   return res.json(serviceData);
 }
 
 export async function createService(req: Request, res: Response) {
-  const files = req.files as Record<string, Express.Multer.File[]> | undefined;
-  const coverFile = files?.coverImage?.[0];
-  const galleryFiles = files?.gallery || [];
-  const videoFile = files?.video?.[0];
+  try {
+    const files = req.files as Record<string, Express.Multer.File[]> | undefined;
+    const coverFile = files?.coverImage?.[0];
+    const galleryFiles = files?.gallery || [];
+    const videoFile = files?.video?.[0];
 
-  const coverImage = await uploadMediaFile(coverFile, "moqawalat/services");
-  const uploadedGallery = await uploadMediaFiles(galleryFiles, "moqawalat/services");
-  const uploadedVideo = await uploadMediaFile(videoFile, "moqawalat/services");
+    const coverImage = await uploadMediaFile(coverFile, "moqawalat/services");
+    const uploadedGallery = await uploadMediaFiles(galleryFiles, "moqawalat/services");
+    const uploadedVideo = await uploadMediaFile(videoFile, "moqawalat/services");
 
-  const gallery = [...parseGallery(req.body.gallery), ...uploadedGallery];
-  const existingDescriptions = normalizeDescriptions(parseGallery(req.body.galleryDescriptions), parseGallery(req.body.gallery).length);
-  const newDescriptions = normalizeDescriptions(parseGallery(req.body.newGalleryDescriptions), uploadedGallery.length);
-  const galleryDescriptions = [...existingDescriptions, ...newDescriptions];
-  const normalizedInputSlug = toSlug(String(req.body.slug || ""));
-  const rawSlug = normalizedInputSlug || toSlug(String(req.body.titleAr || ""));
-  const slug = rawSlug || `service-${Date.now()}`;
-  const isPublished = parseBoolean(req.body.isPublished);
+    const gallery = [...parseGallery(req.body.gallery), ...uploadedGallery];
+    const existingDescriptions = normalizeDescriptions(parseGallery(req.body.galleryDescriptions), parseGallery(req.body.gallery).length);
+    const newDescriptions = normalizeDescriptions(parseGallery(req.body.newGalleryDescriptions), uploadedGallery.length);
+    const galleryDescriptions = [...existingDescriptions, ...newDescriptions];
+    const normalizedInputSlug = toSlug(String(req.body.slug || ""));
+    const rawSlug = normalizedInputSlug || toSlug(String(req.body.titleAr || ""));
+    const slug = rawSlug || `service-${Date.now()}`;
+    const isPublished = parseBoolean(req.body.isPublished);
 
-  const createData: any = {
+    const createData: any = {
       titleAr: req.body.titleAr,
       slug,
       shortDescAr: req.body.shortDescAr,
@@ -247,50 +278,59 @@ export async function createService(req: Request, res: Response) {
       isPublished: typeof isPublished === "boolean" ? isPublished : true
     };
 
-  let service: any;
+    let service: any;
 
-  try {
-    service = await prisma.service.create({ data: createData });
-  } catch (error) {
-    if (!isMissingGalleryDescriptionsColumnError(error)) {
-      throw error;
+    try {
+      service = await prisma.service.create({ data: createData });
+    } catch (error) {
+      if (!isMissingGalleryDescriptionsColumnError(error)) {
+        throw error;
+      }
+
+      const fallbackCreateData = { ...createData };
+      delete fallbackCreateData.galleryDescriptions;
+      service = appendEmptyGalleryDescriptions(await prisma.service.create({ data: fallbackCreateData }));
     }
 
-    const fallbackCreateData = { ...createData };
-    delete fallbackCreateData.galleryDescriptions;
-    service = appendEmptyGalleryDescriptions(await prisma.service.create({ data: fallbackCreateData }));
-  }
+    return res.status(201).json(service);
+  } catch (error) {
+    const mapped = mapServiceMutationError(error);
+    if (mapped) {
+      return res.status(mapped.status).json({ message: mapped.message, code: mapped.code });
+    }
 
-  return res.status(201).json(service);
+    throw error;
+  }
 }
 
 export async function updateService(req: Request, res: Response) {
-  const files = req.files as Record<string, Express.Multer.File[]> | undefined;
-  const coverFile = files?.coverImage?.[0];
-  const galleryFiles = files?.gallery || [];
-  const videoFile = files?.video?.[0];
+  try {
+    const files = req.files as Record<string, Express.Multer.File[]> | undefined;
+    const coverFile = files?.coverImage?.[0];
+    const galleryFiles = files?.gallery || [];
+    const videoFile = files?.video?.[0];
 
-  const coverImage = await uploadMediaFile(coverFile, "moqawalat/services");
-  const uploadedGallery = await uploadMediaFiles(galleryFiles, "moqawalat/services");
-  const uploadedVideo = await uploadMediaFile(videoFile, "moqawalat/services");
+    const coverImage = await uploadMediaFile(coverFile, "moqawalat/services");
+    const uploadedGallery = await uploadMediaFiles(galleryFiles, "moqawalat/services");
+    const uploadedVideo = await uploadMediaFile(videoFile, "moqawalat/services");
 
-  const existingGallery = parseGallery(req.body.gallery);
-  const gallery = [...existingGallery, ...uploadedGallery];
-  const existingDescriptions = normalizeDescriptions(parseGallery(req.body.galleryDescriptions), existingGallery.length);
-  const newDescriptions = normalizeDescriptions(parseGallery(req.body.newGalleryDescriptions), uploadedGallery.length);
-  const galleryDescriptions = [...existingDescriptions, ...newDescriptions];
-  const isPublished = parseBoolean(req.body.isPublished);
-  const removeCoverImage = parseBoolean(req.body.removeCoverImage) === true;
-  const removeVideo = parseBoolean(req.body.removeVideoUrl) === true;
-  const hasGalleryField = typeof req.body.gallery !== "undefined";
-  const hasGalleryDescriptionsField = typeof req.body.galleryDescriptions !== "undefined";
-  const imageUrl = typeof req.body.imageUrl === "string" && req.body.imageUrl.length > 0 ? req.body.imageUrl : undefined;
-  const coverValue = removeCoverImage
-    ? null
-    : coverImage || (typeof req.body.coverImage === "string" ? req.body.coverImage.trim() || null : undefined);
-  const videoValue = removeVideo
-    ? null
-    : uploadedVideo || (typeof req.body.videoUrl === "string" ? req.body.videoUrl.trim() || null : undefined);
+    const existingGallery = parseGallery(req.body.gallery);
+    const gallery = [...existingGallery, ...uploadedGallery];
+    const existingDescriptions = normalizeDescriptions(parseGallery(req.body.galleryDescriptions), existingGallery.length);
+    const newDescriptions = normalizeDescriptions(parseGallery(req.body.newGalleryDescriptions), uploadedGallery.length);
+    const galleryDescriptions = [...existingDescriptions, ...newDescriptions];
+    const isPublished = parseBoolean(req.body.isPublished);
+    const removeCoverImage = parseBoolean(req.body.removeCoverImage) === true;
+    const removeVideo = parseBoolean(req.body.removeVideoUrl) === true;
+    const hasGalleryField = typeof req.body.gallery !== "undefined";
+    const hasGalleryDescriptionsField = typeof req.body.galleryDescriptions !== "undefined";
+    const imageUrl = typeof req.body.imageUrl === "string" && req.body.imageUrl.length > 0 ? req.body.imageUrl : undefined;
+    const coverValue = removeCoverImage
+      ? null
+      : coverImage || (typeof req.body.coverImage === "string" ? req.body.coverImage.trim() || null : undefined);
+    const videoValue = removeVideo
+      ? null
+      : uploadedVideo || (typeof req.body.videoUrl === "string" ? req.body.videoUrl.trim() || null : undefined);
 
     const normalizedUpdateSlug = toSlug(String(req.body.slug || ""));
 
@@ -309,33 +349,50 @@ export async function updateService(req: Request, res: Response) {
       isPublished: typeof isPublished === "boolean" ? isPublished : undefined
     };
 
-  let service: any;
+    let service: any;
 
-  try {
-    service = await prisma.service.update({
-      where: { id: req.params.id },
-      data: updateData
-    });
-  } catch (error) {
-    if (!isMissingGalleryDescriptionsColumnError(error)) {
-      throw error;
+    try {
+      service = await prisma.service.update({
+        where: { id: req.params.id },
+        data: updateData
+      });
+    } catch (error) {
+      if (!isMissingGalleryDescriptionsColumnError(error)) {
+        throw error;
+      }
+
+      const fallbackUpdateData = { ...updateData };
+      delete fallbackUpdateData.galleryDescriptions;
+
+      service = appendEmptyGalleryDescriptions(
+        await prisma.service.update({
+          where: { id: req.params.id },
+          data: fallbackUpdateData
+        })
+      );
     }
 
-    const fallbackUpdateData = { ...updateData };
-    delete fallbackUpdateData.galleryDescriptions;
+    return res.json(service);
+  } catch (error) {
+    const mapped = mapServiceMutationError(error);
+    if (mapped) {
+      return res.status(mapped.status).json({ message: mapped.message, code: mapped.code });
+    }
 
-    service = appendEmptyGalleryDescriptions(
-      await prisma.service.update({
-        where: { id: req.params.id },
-        data: fallbackUpdateData
-      })
-    );
+    throw error;
   }
-
-  return res.json(service);
 }
 
 export async function deleteService(req: Request, res: Response) {
-  await prisma.service.delete({ where: { id: req.params.id } });
-  return res.status(204).send();
+  try {
+    await prisma.service.delete({ where: { id: req.params.id } });
+    return res.status(204).send();
+  } catch (error) {
+    const mapped = mapServiceMutationError(error);
+    if (mapped) {
+      return res.status(mapped.status).json({ message: mapped.message, code: mapped.code });
+    }
+
+    throw error;
+  }
 }

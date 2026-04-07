@@ -5,7 +5,7 @@ export function requireAuth(req: Request, res: Response, next: NextFunction) {
   const token = req.headers.authorization?.replace("Bearer ", "");
 
   if (!token) {
-    return res.status(401).json({ message: "Unauthorized" });
+    return res.status(401).json({ message: "غير مصرح" });
   }
 
   try {
@@ -23,6 +23,6 @@ export function requireAuth(req: Request, res: Response, next: NextFunction) {
 
     return next();
   } catch {
-    return res.status(401).json({ message: "Invalid token" });
+    return res.status(401).json({ message: "رمز الدخول غير صالح" });
   }
 }
