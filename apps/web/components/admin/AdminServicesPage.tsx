@@ -5,6 +5,10 @@ import ConfirmDeleteModal from "./ConfirmDeleteModal";
 import type { Service } from "@/lib/types";
 
 const PAGE_SIZE = 8;
+const IMAGE_MAX_SIDE_PX = 1920;
+const IMAGE_TARGET_MAX_BYTES = 900 * 1024;
+const IMAGE_INITIAL_QUALITY = 0.82;
+const IMAGE_MIN_QUALITY = 0.55;
 
 type ServiceFormState = {
   id?: string;
@@ -113,6 +117,10 @@ function buildSaveErrorMessage(status: number, payload: ApiErrorPayload) {
   }
 
   if (payload.message) {
+    if (payload.message.includes("FUNCTION_PAYLOAD_TOO_LARGE") || payload.message.includes("Request Entity Too Large")) {
+      return "حجم الطلب كبير جدا على مزود الاستضافة. تم تفعيل الرفع المباشر للـ API مع ضغط الصور؛ أعد تسجيل الدخول ثم حاول مرة أخرى.";
+    }
+
     return payload.message;
   }
 
@@ -139,6 +147,124 @@ function buildSaveErrorMessage(status: number, payload: ApiErrorPayload) {
   return "تعذر حفظ الخدمة. تحقق من البيانات المدخلة وحاول مرة أخرى.";
 }
 
+function getCookieValue(name: string) {
+  if (typeof document === "undefined") {
+    return "";
+  }
+
+  const escaped = name.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+  const matched = document.cookie.match(new RegExp(`(?:^|; )${escaped}=([^;]*)`));
+
+  if (!matched) {
+    return "";
+  }
+
+  try {
+    return decodeURIComponent(matched[1]);
+  } catch {
+    return matched[1];
+  }
+}
+
+function getDirectApiBaseUrl() {
+  const value = (process.env.NEXT_PUBLIC_API_URL || "").trim();
+  if (!/^https?:\/\//i.test(value)) {
+    return "";
+  }
+
+  return value.replace(/\/+$/, "");
+}
+
+function toWebpFileName(fileName: string) {
+  return fileName.replace(/\.[^.]+$/, "") + ".webp";
+}
+
+function readFileAsDataUrl(file: File): Promise<string> {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = () => resolve(String(reader.result || ""));
+    reader.onerror = () => reject(new Error("file-read-failed"));
+    reader.readAsDataURL(file);
+  });
+}
+
+function loadImage(source: string): Promise<HTMLImageElement> {
+  return new Promise((resolve, reject) => {
+    const image = new Image();
+    image.onload = () => resolve(image);
+    image.onerror = () => reject(new Error("image-load-failed"));
+    image.src = source;
+  });
+}
+
+function canvasToBlob(canvas: HTMLCanvasElement, quality: number): Promise<Blob> {
+  return new Promise((resolve, reject) => {
+    canvas.toBlob(
+      (blob) => {
+        if (!blob) {
+          reject(new Error("blob-create-failed"));
+          return;
+        }
+
+        resolve(blob);
+      },
+      "image/webp",
+      quality
+    );
+  });
+}
+
+async function compressImageFile(file: File): Promise<File> {
+  if (!file.type.startsWith("image/")) {
+    return file;
+  }
+
+  if (file.size <= 350 * 1024) {
+    return file;
+  }
+
+  try {
+    const src = await readFileAsDataUrl(file);
+    const image = await loadImage(src);
+
+    const maxSide = Math.max(image.width, image.height);
+    const scale = maxSide > IMAGE_MAX_SIDE_PX ? IMAGE_MAX_SIDE_PX / maxSide : 1;
+
+    const width = Math.max(1, Math.round(image.width * scale));
+    const height = Math.max(1, Math.round(image.height * scale));
+
+    const canvas = document.createElement("canvas");
+    canvas.width = width;
+    canvas.height = height;
+
+    const context = canvas.getContext("2d");
+    if (!context) {
+      return file;
+    }
+
+    context.drawImage(image, 0, 0, width, height);
+
+    let quality = IMAGE_INITIAL_QUALITY;
+    let blob = await canvasToBlob(canvas, quality);
+
+    while (blob.size > IMAGE_TARGET_MAX_BYTES && quality > IMAGE_MIN_QUALITY) {
+      quality = Math.max(IMAGE_MIN_QUALITY, quality - 0.08);
+      blob = await canvasToBlob(canvas, quality);
+    }
+
+    return new File([blob], toWebpFileName(file.name), {
+      type: "image/webp",
+      lastModified: Date.now()
+    });
+  } catch {
+    return file;
+  }
+}
+
+async function compressImageFiles(files: File[]) {
+  return Promise.all(files.map((file) => compressImageFile(file)));
+}
+
 export default function AdminServicesPage() {
   const [items, setItems] = useState<Service[]>([]);
   const [total, setTotal] = useState(0);
@@ -155,6 +281,7 @@ export default function AdminServicesPage() {
   const [videoFile, setVideoFile] = useState<File | null>(null);
   const [removeCoverImage, setRemoveCoverImage] = useState(false);
   const [removeVideoUrl, setRemoveVideoUrl] = useState(false);
+  const [isCompressingImages, setIsCompressingImages] = useState(false);
   const [deleteTarget, setDeleteTarget] = useState<Service | null>(null);
 
   const totalPages = Math.max(Math.ceil(total / PAGE_SIZE), 1);
@@ -271,10 +398,43 @@ export default function AdminServicesPage() {
     setNewGalleryDescriptions((current) => current.filter((_, i) => i !== fileIndex));
   }
 
+  async function handleCoverSelection(file: File | null) {
+    setRemoveCoverImage(false);
+
+    if (!file) {
+      setCoverFile(null);
+      return;
+    }
+
+    setIsCompressingImages(true);
+    try {
+      const [compressed] = await compressImageFiles([file]);
+      setCoverFile(compressed || file);
+    } finally {
+      setIsCompressingImages(false);
+    }
+  }
+
+  async function handleGallerySelection(files: File[]) {
+    setIsCompressingImages(true);
+    try {
+      const compressed = await compressImageFiles(files);
+      setGalleryFiles(compressed);
+      setNewGalleryDescriptions((current) => compressed.map((_, index) => current[index] || ""));
+    } finally {
+      setIsCompressingImages(false);
+    }
+  }
+
   async function handleSubmit(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
     setNotice("");
     setError("");
+
+    if (isCompressingImages) {
+      setError("يرجى الانتظار حتى يكتمل ضغط الصور ثم أعد المحاولة.");
+      return;
+    }
 
     try {
       const formData = new FormData();
@@ -310,11 +470,17 @@ export default function AdminServicesPage() {
 
       galleryFiles.forEach((file) => formData.append("gallery", file));
 
-      const endpoint = form.id ? `/api/services/${form.id}` : "/api/services";
+      const proxyEndpoint = form.id ? `/api/services/${form.id}` : "/api/services";
       const method = form.id ? "PUT" : "POST";
+      const directApiBaseUrl = getDirectApiBaseUrl();
+      const token = getCookieValue("admin_token");
+      const canUseDirectApi = Boolean(directApiBaseUrl && token);
+      const directEndpoint = form.id ? `${directApiBaseUrl}/services/${form.id}` : `${directApiBaseUrl}/services`;
+      const endpoint = canUseDirectApi ? directEndpoint : proxyEndpoint;
 
       const response = await fetch(endpoint, {
         method,
+        ...(canUseDirectApi ? { headers: { Authorization: `Bearer ${token}` } } : {}),
         body: formData
       });
 
@@ -328,7 +494,7 @@ export default function AdminServicesPage() {
       resetForm();
       loadServices();
     } catch {
-      setError("تعذر الاتصال بالخادم أثناء حفظ الخدمة. تحقق من اتصال الشبكة ثم حاول مرة أخرى.");
+      setError("تعذر الاتصال بالخادم أثناء حفظ الخدمة. تحقق من الشبكة وإعدادات API/CORS ثم حاول مرة أخرى.");
     }
   }
 
@@ -467,10 +633,11 @@ export default function AdminServicesPage() {
               type="file"
               accept="image/*"
               onChange={(event) => {
-                setRemoveCoverImage(false);
-                setCoverFile(event.target.files?.[0] || null);
+                const selectedFile = event.target.files?.[0] || null;
+                void handleCoverSelection(selectedFile);
               }}
             />
+            {isCompressingImages ? <small className="admin-hint">جار ضغط الصور لتحسين السرعة...</small> : null}
             <div className="admin-actions">
               <button
                 className="btn btn-outline"
@@ -500,10 +667,10 @@ export default function AdminServicesPage() {
               accept="image/*"
               onChange={(event) => {
                 const files = Array.from(event.target.files || []);
-                setGalleryFiles(files);
-                setNewGalleryDescriptions((current) => files.map((_, index) => current[index] || ""));
+                void handleGallerySelection(files);
               }}
             />
+            <small className="admin-hint">سيتم ضغط صور المعرض تلقائيا قبل الرفع.</small>
             {form.gallery.length || newGalleryPreviews.length ? (
               <div className="admin-gallery-editor">
                 {form.gallery.map((src, index) => (
@@ -578,8 +745,8 @@ export default function AdminServicesPage() {
             {videoFile ? <small className="admin-hint">تم اختيار ملف فيديو: {videoFile.name}</small> : null}
           </div>
 
-          <button className="btn btn-primary" type="submit">
-            {form.id ? "تحديث الخدمة" : "حفظ الخدمة"}
+          <button className="btn btn-primary" type="submit" disabled={isCompressingImages}>
+            {isCompressingImages ? "جار تجهيز الصور..." : form.id ? "تحديث الخدمة" : "حفظ الخدمة"}
           </button>
         </form>
       </section>
