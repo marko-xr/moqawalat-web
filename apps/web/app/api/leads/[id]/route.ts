@@ -43,3 +43,31 @@ export async function PATCH(request: Request, context: { params: Promise<{ id: s
 
   return NextResponse.json(payload, { status: response.status });
 }
+
+export async function DELETE(_request: Request, context: { params: Promise<{ id: string }> }) {
+  const token = (await cookies()).get("admin_token")?.value;
+
+  if (!token) {
+    return NextResponse.json({ message: "Unauthorized" }, { status: 401 });
+  }
+
+  const { id } = await context.params;
+
+  const response = await fetch(`${API_URL}/leads/${id}`, {
+    method: "DELETE",
+    cache: "no-store",
+    headers: {
+      Authorization: `Bearer ${token}`
+    }
+  });
+
+  if (!response.ok) {
+    const payload = await response.json().catch(() => ({}));
+    return NextResponse.json(
+      { message: payload?.message || "تعذر حذف العميل المحتمل" },
+      { status: response.status }
+    );
+  }
+
+  return NextResponse.json({ success: true });
+}

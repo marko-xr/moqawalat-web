@@ -7,6 +7,8 @@ import LeadTable from "./LeadTable";
 import LeadsSkeleton from "./LeadsSkeleton";
 import Pagination from "./Pagination";
 import { useAdminLeads } from "./useAdminLeads";
+import ConfirmDeleteModal from "./ConfirmDeleteModal";
+import type { AdminLead } from "./types";
 
 const PAGE_SIZE = 10;
 
@@ -15,6 +17,7 @@ export default function AdminLeadsDashboard() {
   const [service, setService] = useState<string>("");
   const [page, setPage] = useState<number>(1);
   const [notice, setNotice] = useState<string>("");
+  const [deleteTarget, setDeleteTarget] = useState<AdminLead | null>(null);
 
   const params = useMemo(
     () => ({
@@ -26,7 +29,7 @@ export default function AdminLeadsDashboard() {
     [q, service, page]
   );
 
-  const { data, loading, error, refetch, updateLead, updatingLeadIds } = useAdminLeads(params);
+  const { data, loading, error, refetch, updateLead, deleteLead, updatingLeadIds, deletingLeadIds } = useAdminLeads(params);
 
   function onSearch(value: string) {
     setQ(value);
@@ -53,6 +56,21 @@ export default function AdminLeadsDashboard() {
       setNotice("تم حفظ الملاحظات");
     } catch {
       setNotice("تعذر حفظ الملاحظات، حاول مرة أخرى");
+    }
+  }
+
+  async function onConfirmDelete() {
+    if (!deleteTarget) {
+      return;
+    }
+
+    try {
+      await deleteLead(deleteTarget.id);
+      setNotice("تم حذف العميل المحتمل");
+      setDeleteTarget(null);
+      refetch();
+    } catch {
+      setNotice("تعذر حذف العميل المحتمل، حاول مرة أخرى");
     }
   }
 
@@ -95,12 +113,24 @@ export default function AdminLeadsDashboard() {
           <LeadTable
             leads={data.items}
             updatingLeadIds={updatingLeadIds}
+            deletingLeadIds={deletingLeadIds}
             onSaveStatus={(lead, status) => onSaveStatus(lead.id, status)}
             onSaveNotes={(lead, crmNotes) => onSaveNotes(lead.id, crmNotes)}
+            onRequestDelete={(lead) => setDeleteTarget(lead)}
           />
           <Pagination page={data.page} totalPages={data.totalPages} onPageChange={setPage} />
         </>
       ) : null}
+
+      <ConfirmDeleteModal
+        open={Boolean(deleteTarget)}
+        title="حذف عميل محتمل"
+        description={deleteTarget ? `هل تريد حذف العميل ${deleteTarget.fullName}؟` : ""}
+        onCancel={() => setDeleteTarget(null)}
+        onConfirm={() => {
+          void onConfirmDelete();
+        }}
+      />
     </div>
   );
 }

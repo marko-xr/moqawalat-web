@@ -2,6 +2,7 @@ export type Service = {
   id: string;
   titleAr: string;
   slug: string;
+  sortOrder?: number | null;
   shortDescAr: string;
   contentAr: string;
   seoTitleAr?: string | null;

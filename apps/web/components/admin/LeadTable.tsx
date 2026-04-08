@@ -3,8 +3,10 @@ import type { AdminLead } from "./types";
 type LeadTableProps = {
   leads: AdminLead[];
   updatingLeadIds: string[];
+  deletingLeadIds: string[];
   onSaveStatus: (lead: AdminLead, status: AdminLead["status"]) => Promise<void>;
   onSaveNotes: (lead: AdminLead, crmNotes: string) => Promise<void>;
+  onRequestDelete: (lead: AdminLead) => void;
 };
 
 const STATUS_LABELS: Record<AdminLead["status"], string> = {
@@ -50,7 +52,14 @@ function formatRelativeDate(value: string) {
   return rtf.format(Math.round(diffMs / (1000 * 60 * 60 * 24)), "day");
 }
 
-export default function LeadTable({ leads, updatingLeadIds, onSaveStatus, onSaveNotes }: LeadTableProps) {
+export default function LeadTable({
+  leads,
+  updatingLeadIds,
+  deletingLeadIds,
+  onSaveStatus,
+  onSaveNotes,
+  onRequestDelete
+}: LeadTableProps) {
   return (
     <section className="card">
       <div className="admin-table-wrap">
@@ -67,6 +76,7 @@ export default function LeadTable({ leads, updatingLeadIds, onSaveStatus, onSave
               <th>الرسالة</th>
               <th>ملاحظات CRM</th>
               <th>تاريخ الإنشاء</th>
+              <th>إجراءات</th>
             </tr>
           </thead>
           <tbody>
@@ -152,6 +162,16 @@ export default function LeadTable({ leads, updatingLeadIds, onSaveStatus, onSave
                   />
                 </td>
                 <td title={new Date(lead.createdAt).toLocaleString("ar-SA")}>{formatRelativeDate(lead.createdAt)}</td>
+                <td>
+                  <button
+                    className="btn btn-outline"
+                    type="button"
+                    disabled={deletingLeadIds.includes(lead.id)}
+                    onClick={() => onRequestDelete(lead)}
+                  >
+                    {deletingLeadIds.includes(lead.id) ? "جار الحذف..." : "حذف"}
+                  </button>
+                </td>
               </tr>
             ))}
           </tbody>

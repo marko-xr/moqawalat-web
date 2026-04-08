@@ -3,6 +3,7 @@ import { body } from "express-validator";
 import {
   createLead,
   createLeadValidation,
+  deleteLead,
   getLeads,
   updateLead
 } from "../controllers/leads.controller.js";
@@ -24,5 +25,6 @@ router.patch(
   validateRequest,
   updateLead
 );
+router.delete("/:id", requireAuth, requireRole("OWNER", "ADMIN"), deleteLead);
 
 export default router;

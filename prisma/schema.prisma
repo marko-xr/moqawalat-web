@@ -33,6 +33,7 @@ model Service {
   id              String   @id @default(cuid())
   titleAr         String
   slug            String   @unique
+  sortOrder       Int      @default(0)
   shortDescAr     String
   contentAr       String
   seoTitleAr      String?

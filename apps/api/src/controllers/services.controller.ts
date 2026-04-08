@@ -45,7 +45,24 @@ function normalizeDescriptions(values: string[], targetLength: number) {
   return normalized;
 }
 
-const SERVICE_SELECT_BASE = {
+function parseSortOrder(value: unknown): number | undefined {
+  if (value === undefined || value === null) {
+    return undefined;
+  }
+
+  const parsed = Number(value);
+  if (!Number.isFinite(parsed)) {
+    return undefined;
+  }
+
+  if (parsed < 0) {
+    return undefined;
+  }
+
+  return Math.floor(parsed);
+}
+
+const SERVICE_SELECT_LEGACY = {
   id: true,
   titleAr: true,
   slug: true,
@@ -60,6 +77,11 @@ const SERVICE_SELECT_BASE = {
   isPublished: true,
   createdAt: true,
   updatedAt: true
+} as const;
+
+const SERVICE_SELECT_BASE = {
+  ...SERVICE_SELECT_LEGACY,
+  sortOrder: true
 } as const;
 
 const SERVICE_SELECT_WITH_DESCRIPTIONS = {
@@ -80,10 +102,30 @@ function isMissingGalleryDescriptionsColumnError(error: unknown) {
   return column.includes("galleryDescriptions");
 }
 
+function isMissingSortOrderColumnError(error: unknown) {
+  if (!(error instanceof Prisma.PrismaClientKnownRequestError)) {
+    return false;
+  }
+
+  if (error.code !== "P2022") {
+    return false;
+  }
+
+  const column = String((error.meta as { column?: string } | undefined)?.column || "");
+  return column.includes("sortOrder");
+}
+
 function appendEmptyGalleryDescriptions<T extends { gallery: string[] }>(service: T) {
   return {
     ...service,
     galleryDescriptions: Array(service.gallery?.length || 0).fill("")
+  };
+}
+
+function appendSortOrder<T>(service: T, sortOrder: number) {
+  return {
+    ...service,
+    sortOrder
   };
 }
 
@@ -119,6 +161,7 @@ function mapServiceMutationError(error: unknown) {
 
 export const serviceCreateValidation = [
   body("titleAr").isLength({ min: 3 }),
+  body("sortOrder").optional({ values: "falsy" }).isInt({ min: 0 }).toInt(),
   body("slug")
     .custom((value) => {
       if (value === undefined || value === null || String(value).trim() === "") {
@@ -143,6 +186,7 @@ export const serviceCreateValidation = [
 
 export const serviceUpdateValidation = [
   body("titleAr").optional().isLength({ min: 3 }),
+  body("sortOrder").optional({ values: "falsy" }).isInt({ min: 0 }).toInt(),
   body("slug")
     .custom((value) => {
       if (value === undefined || value === null || String(value).trim() === "") {
@@ -169,45 +213,76 @@ export async function getServices(_req: Request, res: Response) {
   try {
     const services = await prisma.service.findMany({
       where: { isPublished: true },
-      orderBy: { createdAt: "desc" },
+      orderBy: [{ sortOrder: "asc" }, { createdAt: "desc" }],
       select: SERVICE_SELECT_WITH_DESCRIPTIONS
     });
 
     return res.json(services);
   } catch (error) {
-    if (!isMissingGalleryDescriptionsColumnError(error)) {
+    if (!isMissingGalleryDescriptionsColumnError(error) && !isMissingSortOrderColumnError(error)) {
       throw error;
     }
 
-    const services = await prisma.service.findMany({
-      where: { isPublished: true },
-      orderBy: { createdAt: "desc" },
-      select: SERVICE_SELECT_BASE
-    });
+    try {
+      const services = await prisma.service.findMany({
+        where: { isPublished: true },
+        orderBy: [{ sortOrder: "asc" }, { createdAt: "desc" }],
+        select: SERVICE_SELECT_BASE
+      });
 
-    return res.json(services.map((service) => appendEmptyGalleryDescriptions(service)));
+      return res.json(services.map((service) => appendEmptyGalleryDescriptions(service)));
+    } catch (fallbackError) {
+      if (!isMissingSortOrderColumnError(fallbackError)) {
+        throw fallbackError;
+      }
+
+      const legacyServices = await prisma.service.findMany({
+        where: { isPublished: true },
+        orderBy: { createdAt: "desc" },
+        select: SERVICE_SELECT_LEGACY
+      });
+
+      return res.json(
+        legacyServices.map((service, index) => appendSortOrder(appendEmptyGalleryDescriptions(service), index))
+      );
+    }
   }
 }
 
 export async function getServicesAdmin(_req: Request, res: Response) {
   try {
     const services = await prisma.service.findMany({
-      orderBy: { createdAt: "desc" },
+      orderBy: [{ sortOrder: "asc" }, { createdAt: "desc" }],
       select: SERVICE_SELECT_WITH_DESCRIPTIONS
     });
 
     return res.json(services);
   } catch (error) {
-    if (!isMissingGalleryDescriptionsColumnError(error)) {
+    if (!isMissingGalleryDescriptionsColumnError(error) && !isMissingSortOrderColumnError(error)) {
       throw error;
     }
 
-    const services = await prisma.service.findMany({
-      orderBy: { createdAt: "desc" },
-      select: SERVICE_SELECT_BASE
-    });
+    try {
+      const services = await prisma.service.findMany({
+        orderBy: [{ sortOrder: "asc" }, { createdAt: "desc" }],
+        select: SERVICE_SELECT_BASE
+      });
 
-    return res.json(services.map((service) => appendEmptyGalleryDescriptions(service)));
+      return res.json(services.map((service) => appendEmptyGalleryDescriptions(service)));
+    } catch (fallbackError) {
+      if (!isMissingSortOrderColumnError(fallbackError)) {
+        throw fallbackError;
+      }
+
+      const legacyServices = await prisma.service.findMany({
+        orderBy: { createdAt: "desc" },
+        select: SERVICE_SELECT_LEGACY
+      });
+
+      return res.json(
+        legacyServices.map((service, index) => appendSortOrder(appendEmptyGalleryDescriptions(service), index))
+      );
+    }
   }
 }
 
@@ -220,16 +295,29 @@ export async function getServiceBySlug(req: Request, res: Response) {
       select: SERVICE_SELECT_WITH_DESCRIPTIONS
     });
   } catch (error) {
-    if (!isMissingGalleryDescriptionsColumnError(error)) {
+    if (!isMissingGalleryDescriptionsColumnError(error) && !isMissingSortOrderColumnError(error)) {
       throw error;
     }
 
-    const fallbackService = await prisma.service.findUnique({
-      where: { slug: req.params.slug },
-      select: SERVICE_SELECT_BASE
-    });
+    try {
+      const fallbackService = await prisma.service.findUnique({
+        where: { slug: req.params.slug },
+        select: SERVICE_SELECT_BASE
+      });
 
-    serviceData = fallbackService ? appendEmptyGalleryDescriptions(fallbackService) : null;
+      serviceData = fallbackService ? appendEmptyGalleryDescriptions(fallbackService) : null;
+    } catch (fallbackError) {
+      if (!isMissingSortOrderColumnError(fallbackError)) {
+        throw fallbackError;
+      }
+
+      const legacyService = await prisma.service.findUnique({
+        where: { slug: req.params.slug },
+        select: SERVICE_SELECT_LEGACY
+      });
+
+      serviceData = legacyService ? appendSortOrder(appendEmptyGalleryDescriptions(legacyService), 0) : null;
+    }
   }
 
   if (!serviceData) {
@@ -262,10 +350,24 @@ export async function createService(req: Request, res: Response) {
     const rawSlug = normalizedInputSlug || toSlug(String(req.body.titleAr || ""));
     const slug = rawSlug || `service-${Date.now()}`;
     const isPublished = parseBoolean(req.body.isPublished);
+    const requestedSortOrder = parseSortOrder(req.body.sortOrder);
+
+    let sortOrder = requestedSortOrder;
+    if (typeof sortOrder !== "number") {
+      try {
+        const aggregate = await prisma.service.aggregate({ _max: { sortOrder: true } });
+        sortOrder = (aggregate._max.sortOrder ?? -1) + 1;
+      } catch (aggregateError) {
+        if (!isMissingSortOrderColumnError(aggregateError)) {
+          throw aggregateError;
+        }
+      }
+    }
 
     const createData: any = {
       titleAr: req.body.titleAr,
       slug,
+      sortOrder,
       shortDescAr: req.body.shortDescAr,
       contentAr: req.body.contentAr,
       seoTitleAr: req.body.seoTitleAr || null,
@@ -283,13 +385,21 @@ export async function createService(req: Request, res: Response) {
     try {
       service = await prisma.service.create({ data: createData });
     } catch (error) {
-      if (!isMissingGalleryDescriptionsColumnError(error)) {
+      if (!isMissingGalleryDescriptionsColumnError(error) && !isMissingSortOrderColumnError(error)) {
         throw error;
       }
 
       const fallbackCreateData = { ...createData };
-      delete fallbackCreateData.galleryDescriptions;
-      service = appendEmptyGalleryDescriptions(await prisma.service.create({ data: fallbackCreateData }));
+      if (isMissingGalleryDescriptionsColumnError(error)) {
+        delete fallbackCreateData.galleryDescriptions;
+      }
+      if (isMissingSortOrderColumnError(error)) {
+        delete fallbackCreateData.sortOrder;
+      }
+
+      const createdService = await prisma.service.create({ data: fallbackCreateData });
+      service = isMissingGalleryDescriptionsColumnError(error) ? appendEmptyGalleryDescriptions(createdService) : createdService;
+      service = isMissingSortOrderColumnError(error) ? appendSortOrder(service, 0) : service;
     }
 
     return res.status(201).json(service);
@@ -333,10 +443,14 @@ export async function updateService(req: Request, res: Response) {
       : uploadedVideo || (typeof req.body.videoUrl === "string" ? req.body.videoUrl.trim() || null : undefined);
 
     const normalizedUpdateSlug = toSlug(String(req.body.slug || ""));
+    const hasSortOrderField =
+      typeof req.body.sortOrder !== "undefined" && String(req.body.sortOrder).trim() !== "";
+    const parsedSortOrder = parseSortOrder(req.body.sortOrder);
 
     const updateData: any = {
       titleAr: req.body.titleAr,
       slug: normalizedUpdateSlug || undefined,
+      sortOrder: hasSortOrderField ? parsedSortOrder : undefined,
       shortDescAr: req.body.shortDescAr,
       contentAr: req.body.contentAr,
       seoTitleAr: req.body.seoTitleAr || null,
@@ -357,19 +471,25 @@ export async function updateService(req: Request, res: Response) {
         data: updateData
       });
     } catch (error) {
-      if (!isMissingGalleryDescriptionsColumnError(error)) {
+      if (!isMissingGalleryDescriptionsColumnError(error) && !isMissingSortOrderColumnError(error)) {
         throw error;
       }
 
       const fallbackUpdateData = { ...updateData };
-      delete fallbackUpdateData.galleryDescriptions;
+      if (isMissingGalleryDescriptionsColumnError(error)) {
+        delete fallbackUpdateData.galleryDescriptions;
+      }
+      if (isMissingSortOrderColumnError(error)) {
+        delete fallbackUpdateData.sortOrder;
+      }
 
-      service = appendEmptyGalleryDescriptions(
-        await prisma.service.update({
-          where: { id: req.params.id },
-          data: fallbackUpdateData
-        })
-      );
+      const updatedService = await prisma.service.update({
+        where: { id: req.params.id },
+        data: fallbackUpdateData
+      });
+
+      service = isMissingGalleryDescriptionsColumnError(error) ? appendEmptyGalleryDescriptions(updatedService) : updatedService;
+      service = isMissingSortOrderColumnError(error) ? appendSortOrder(service, 0) : service;
     }
 
     return res.json(service);

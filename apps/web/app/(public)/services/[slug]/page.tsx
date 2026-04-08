@@ -36,6 +36,7 @@ export default async function ServiceDetails({ params }: { params: Promise<{ slu
 
   const cover = service.coverImage || service.imageUrl || "/images/placeholder-before.svg";
   const gallery: string[] = service.gallery || [];
+  const galleryDescriptions: string[] = service.galleryDescriptions || [];
   const videoUrl = service.videoUrl || "";
 
   const phone = process.env.NEXT_PUBLIC_PHONE_NUMBER || "966556741880";
@@ -108,7 +109,7 @@ export default async function ServiceDetails({ params }: { params: Promise<{ slu
         {gallery.length ? (
           <div className="service-gallery">
             {gallery.map((src, index) => (
-              <div className="service-gallery-item" key={`${src}-${index}`}>
+              <figure className="service-gallery-item" key={`${src}-${index}`}>
                 <Image
                   src={src}
                   alt={`${service.titleAr} ${index + 1}`}
@@ -116,7 +117,10 @@ export default async function ServiceDetails({ params }: { params: Promise<{ slu
                   height={750}
                   sizes="(max-width: 1024px) 100vw, 50vw"
                 />
-              </div>
+                {galleryDescriptions[index]?.trim() ? (
+                  <figcaption className="service-gallery-caption">{galleryDescriptions[index]}</figcaption>
+                ) : null}
+              </figure>
             ))}
           </div>
         ) : null}

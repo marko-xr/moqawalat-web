@@ -1,5 +1,6 @@
 import type { Request, Response } from "express";
 import { body } from "express-validator";
+import { Prisma } from "@prisma/client";
 import { prisma } from "../services/prisma.js";
 
 export const createLeadValidation = [
@@ -85,4 +86,17 @@ export async function updateLead(req: Request, res: Response) {
   });
 
   return res.json(lead);
+}
+
+export async function deleteLead(req: Request, res: Response) {
+  try {
+    await prisma.lead.delete({ where: { id: req.params.id } });
+    return res.status(204).send();
+  } catch (error) {
+    if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === "P2025") {
+      return res.status(404).json({ message: "العميل المحتمل غير موجود" });
+    }
+
+    throw error;
+  }
 }

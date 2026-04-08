@@ -14,6 +14,7 @@ type ServiceFormState = {
   id?: string;
   titleAr: string;
   slug: string;
+  sortOrder: string;
   shortDescAr: string;
   contentAr: string;
   seoTitleAr: string;
@@ -28,6 +29,7 @@ type ServiceFormState = {
 const emptyForm: ServiceFormState = {
   titleAr: "",
   slug: "",
+  sortOrder: "",
   shortDescAr: "",
   contentAr: "",
   seoTitleAr: "",
@@ -71,6 +73,7 @@ type ApiErrorPayload = {
 const FIELD_LABELS: Record<string, string> = {
   titleAr: "عنوان الخدمة",
   slug: "الرابط",
+  sortOrder: "ترتيب العرض",
   shortDescAr: "الوصف المختصر",
   contentAr: "الوصف الكامل",
   seoTitleAr: "SEO Title",
@@ -362,6 +365,7 @@ export default function AdminServicesPage() {
       id: item.id,
       titleAr: item.titleAr || "",
       slug: item.slug || "",
+      sortOrder: typeof item.sortOrder === "number" ? String(item.sortOrder) : "",
       shortDescAr: item.shortDescAr || "",
       contentAr: item.contentAr || "",
       seoTitleAr: item.seoTitleAr || "",
@@ -440,6 +444,9 @@ export default function AdminServicesPage() {
       const formData = new FormData();
       formData.append("titleAr", form.titleAr);
       formData.append("slug", form.slug || toSlug(form.titleAr));
+      if (form.sortOrder.trim() !== "") {
+        formData.append("sortOrder", form.sortOrder.trim());
+      }
       formData.append("shortDescAr", form.shortDescAr);
       formData.append("contentAr", form.contentAr);
       formData.append("seoTitleAr", form.seoTitleAr);
@@ -559,6 +566,20 @@ export default function AdminServicesPage() {
               placeholder="auto-generated"
             />
             <small className="admin-hint">يفضل كتابة الرابط بحروف لاتينية.</small>
+          </div>
+
+          <div className="field-stack">
+            <label htmlFor="service-sort-order">ترتيب العرض</label>
+            <input
+              id="service-sort-order"
+              type="number"
+              min={0}
+              step={1}
+              value={form.sortOrder}
+              onChange={(event) => setForm((current) => ({ ...current, sortOrder: event.target.value }))}
+              placeholder="يترك فارغا ليتم وضعها في آخر القائمة"
+            />
+            <small className="admin-hint">الرقم الأصغر يظهر أولا.</small>
           </div>
 
           <div className="field-stack quote-grid-full">
@@ -792,6 +813,7 @@ export default function AdminServicesPage() {
             <thead>
               <tr>
                 <th>الخدمة</th>
+                <th>الترتيب</th>
                 <th>الحالة</th>
                 <th>آخر تحديث</th>
                 <th>إجراءات</th>
@@ -804,6 +826,7 @@ export default function AdminServicesPage() {
                     <strong>{item.titleAr}</strong>
                     <div className="admin-meta">{item.slug}</div>
                   </td>
+                  <td>{typeof item.sortOrder === "number" ? item.sortOrder : "-"}</td>
                   <td>{item.isPublished ? "منشور" : "غير منشور"}</td>
                   <td>{formatDate(item.updatedAt)}</td>
                   <td>

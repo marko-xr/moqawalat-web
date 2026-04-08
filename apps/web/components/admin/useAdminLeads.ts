@@ -26,6 +26,7 @@ export function useAdminLeads(params: Params) {
   const [loading, setLoading] = useState<boolean>(true);
   const [error, setError] = useState<string>("");
   const [updatingLeadIds, setUpdatingLeadIds] = useState<string[]>([]);
+  const [deletingLeadIds, setDeletingLeadIds] = useState<string[]>([]);
 
   const fetchLeads = useCallback(async () => {
     setLoading(true);
@@ -98,12 +99,56 @@ export function useAdminLeads(params: Params) {
     }
   }
 
+  async function deleteLead(leadId: string) {
+    const previousData = data;
+    const leadToDelete = data.items.find((item) => item.id === leadId);
+
+    setDeletingLeadIds((current) => (current.includes(leadId) ? current : [...current, leadId]));
+
+    setData((current) => {
+      const nextItems = current.items.filter((item) => item.id !== leadId);
+      const nextTotal = Math.max(current.total - 1, 0);
+      const nextTotalLeads = Math.max(current.totalLeads - 1, 0);
+      const isTodayLead = leadToDelete ? new Date(leadToDelete.createdAt) >= new Date(new Date().setHours(0, 0, 0, 0)) : false;
+      const nextTodayLeads = Math.max(current.todayLeads - (isTodayLead ? 1 : 0), 0);
+      const nextTotalPages = Math.max(Math.ceil(nextTotal / Math.max(current.pageSize, 1)), 1);
+      const nextPage = Math.min(current.page, nextTotalPages);
+
+      return {
+        ...current,
+        items: nextItems,
+        total: nextTotal,
+        totalLeads: nextTotalLeads,
+        todayLeads: nextTodayLeads,
+        totalPages: nextTotalPages,
+        page: nextPage
+      };
+    });
+
+    try {
+      const response = await fetch(`/api/leads/${leadId}`, {
+        method: "DELETE"
+      });
+
+      if (!response.ok) {
+        throw new Error("تعذر حذف العميل المحتمل");
+      }
+    } catch (deleteError) {
+      setData(previousData);
+      throw deleteError;
+    } finally {
+      setDeletingLeadIds((current) => current.filter((id) => id !== leadId));
+    }
+  }
+
   return {
     data,
     loading,
     error,
     refetch: fetchLeads,
     updateLead,
-    updatingLeadIds
+    deleteLead,
+    updatingLeadIds,
+    deletingLeadIds
   };
 }
