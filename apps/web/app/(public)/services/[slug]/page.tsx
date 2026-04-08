@@ -107,22 +107,32 @@ export default async function ServiceDetails({ params }: { params: Promise<{ slu
         </div>
 
         {gallery.length ? (
-          <div className="service-gallery">
-            {gallery.map((src, index) => (
-              <figure className="service-gallery-item" key={`${src}-${index}`}>
-                <Image
-                  src={src}
-                  alt={`${service.titleAr} ${index + 1}`}
-                  width={1000}
-                  height={750}
-                  sizes="(max-width: 1024px) 100vw, 50vw"
-                />
-                {galleryDescriptions[index]?.trim() ? (
-                  <figcaption className="service-gallery-caption">{galleryDescriptions[index]}</figcaption>
-                ) : null}
-              </figure>
-            ))}
-          </div>
+          <section className="service-gallery-wrap" aria-label="معرض صور الخدمة">
+            <h2>معرض صور الخدمة</h2>
+            <div className="service-gallery">
+              {gallery.map((src, index) => {
+                const description = galleryDescriptions[index]?.trim() || "وصف الصورة غير متوفر";
+
+                return (
+                  <figure className="service-gallery-item" key={`${src}-${index}`}>
+                    <div className="service-gallery-media">
+                      <Image
+                        src={src}
+                        alt={`${service.titleAr} ${index + 1}`}
+                        width={1000}
+                        height={750}
+                        sizes="(max-width: 1024px) 100vw, 50vw"
+                      />
+                    </div>
+                    <figcaption className="service-gallery-caption">
+                      <span className="service-gallery-caption-label">الصورة {index + 1}</span>
+                      <p>{description}</p>
+                    </figcaption>
+                  </figure>
+                );
+              })}
+            </div>
+          </section>
         ) : null}
 
         {videoUrl ? (

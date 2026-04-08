@@ -153,7 +153,7 @@ export async function getServices() {
 
 export async function getServiceBySlug(slug: string) {
   try {
-    const service = await request<any>(`/services/${slug}`);
+    const service = await request<any>(`/services/${slug}`, { cache: "no-store" });
     return normalizeService(service);
   } catch {
     const fallback = DEFAULT_SERVICES_FALLBACK.find((service) => service.slug === slug);
