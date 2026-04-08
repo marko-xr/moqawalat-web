@@ -3,6 +3,8 @@ import { getServiceBySlug, getServices } from "@/lib/api";
 import { notFound } from "next/navigation";
 import Image from "next/image";
 
+export const dynamic = "force-dynamic";
+
 export async function generateStaticParams() {
   const services = await getServices();
   return services.map((service) => ({ slug: service.slug }));
@@ -35,8 +37,8 @@ export default async function ServiceDetails({ params }: { params: Promise<{ slu
   }
 
   const cover = service.coverImage || service.imageUrl || "/images/placeholder-before.svg";
-  const gallery: string[] = service.gallery || [];
-  const galleryDescriptions: string[] = service.galleryDescriptions || [];
+  const gallery: string[] = Array.isArray(service.gallery) ? service.gallery : [];
+  const galleryDescriptions: string[] = Array.isArray(service.galleryDescriptions) ? service.galleryDescriptions : [];
   const videoUrl = service.videoUrl || "";
 
   const phone = process.env.NEXT_PUBLIC_PHONE_NUMBER || "966556741880";
@@ -106,27 +108,27 @@ export default async function ServiceDetails({ params }: { params: Promise<{ slu
           <p>{service.contentAr}</p>
         </div>
 
-        {gallery.length ? (
+        {gallery.length > 0 ? (
           <section className="service-gallery-wrap" aria-label="معرض صور الخدمة">
-            <h2>معرض صور الخدمة</h2>
+            <h2 className="service-gallery-heading">معرض صور الخدمة</h2>
             <div className="service-gallery">
               {gallery.map((src, index) => {
-                const description = galleryDescriptions[index]?.trim() || "وصف الصورة غير متوفر";
+                const caption = galleryDescriptions[index]?.trim() ?? "";
 
                 return (
                   <figure className="service-gallery-item" key={`${src}-${index}`}>
                     <div className="service-gallery-media">
                       <Image
                         src={src}
-                        alt={`${service.titleAr} ${index + 1}`}
+                        alt={caption || `${service.titleAr} – صورة ${index + 1}`}
                         width={1000}
                         height={750}
-                        sizes="(max-width: 1024px) 100vw, 50vw"
+                        sizes="(max-width: 768px) 100vw, 50vw"
                       />
                     </div>
                     <figcaption className="service-gallery-caption">
-                      <span className="service-gallery-caption-label">الصورة {index + 1}</span>
-                      <p>{description}</p>
+                      <span className="service-gallery-caption-index">الصورة {index + 1}</span>
+                      {caption ? <p className="service-gallery-caption-text">{caption}</p> : null}
                     </figcaption>
                   </figure>
                 );
