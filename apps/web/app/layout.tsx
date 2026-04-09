@@ -36,12 +36,14 @@ export const metadata: Metadata = {
 };
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
-  const gaId = process.env.NEXT_PUBLIC_GA_ID;
+  const gaId = process.env.NEXT_PUBLIC_GA_ID?.trim() || "G-PHH8XF1TQF";
 
   return (
     <html lang="ar" dir="rtl" className={cairo.variable}>
-      <body className={cairo.className}>{children}</body>
-      {gaId ? <GoogleAnalytics gaId={gaId} /> : null}
+      <body className={cairo.className}>
+        {children}
+        {gaId ? <GoogleAnalytics gaId={gaId} /> : null}
+      </body>
     </html>
   );
 }
