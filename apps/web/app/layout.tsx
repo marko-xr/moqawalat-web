@@ -36,7 +36,7 @@ export const metadata: Metadata = {
 };
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
-  const gaId = process.env.NEXT_PUBLIC_GA_ID?.trim() || "G-PHH8XF1TQF";
+  const gaId = process.env.NEXT_PUBLIC_GA_ID?.trim();
 
   return (
     <html lang="ar" dir="rtl" className={cairo.variable}>
