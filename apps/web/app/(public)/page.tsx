@@ -30,7 +30,7 @@ export default async function HomePage() {
     telephone: `+${settings.phone}`,
     url: process.env.NEXT_PUBLIC_SITE_URL || "http://localhost:3000",
     sameAs: [`https://wa.me/${settings.wa}`],
-    serviceType: ["دهانات", "عزل أسطح", "أعمال حديد", "جبس وديكورات"]
+    serviceType: ["دهانات", "عزل أسطح", "مظلات وسواتر", "أعمال حديد", "برجولات", "إيبوكسي", "جبس وديكورات"]
   };
 
   return (
@@ -133,10 +133,12 @@ export default async function HomePage() {
         <div className="container">
           <h2>خدمات يبحث عنها العملاء في الدمام والمنطقة الشرقية</h2>
           <p className="seo-intro">
-            نوفر أعمال دهان وعزل ومظلات وسواتر وجبس وديكور وترميم في الدمام والخبر والظهران والقطيف مع معاينة سريعة.
+            نوفر أعمال الدهان والعزل ومظلات وسواتر وسلالم وهناجر مخازن وجميع أعمال الحديد وأبواب حديد وبرجولات،
+            مع تركيب برجولات الدمام ومضلات سيارات، إضافة إلى جميع أعمال الإيبوكسي مثل إيبوكسي الأسطح وإيبوكسي
+            مغاسل السيارات وإيبوكسي خزانات المياه في الدمام والخبر والظهران والقطيف مع معاينة سريعة.
           </p>
           <div className="seo-keywords-grid" aria-label="الكلمات المفتاحية المحلية للخدمات">
-            {SEO_KEYWORDS.services.slice(0, 16).map((keyword) => (
+            {SEO_KEYWORDS.services.map((keyword) => (
               <span key={keyword} className="seo-keyword-chip">
                 {keyword}
               </span>
