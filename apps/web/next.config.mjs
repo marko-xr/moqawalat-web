@@ -34,9 +34,6 @@ const nextConfig = {
       }
     ]
   },
-  experimental: {
-    optimizeCss: true
-  },
   async headers() {
     return [
       {
