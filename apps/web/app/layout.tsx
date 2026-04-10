@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { GoogleAnalytics } from "@next/third-parties/google";
 import { Cairo } from "next/font/google";
 import { HOMEPAGE_SEO_DESCRIPTION, SEO_KEYWORDS } from "@/lib/seo";
+import { getSiteUrl } from "@/lib/site-url";
 import "./globals.css";
 
 const cairo = Cairo({
@@ -12,7 +13,7 @@ const cairo = Cairo({
 });
 
 export const metadata: Metadata = {
-  metadataBase: new URL(process.env.NEXT_PUBLIC_SITE_URL || "http://localhost:3000"),
+  metadataBase: new URL(getSiteUrl()),
   title: {
     default: "مقاولات عامة الدمام",
     template: "%s | مقاولات عامة الدمام"

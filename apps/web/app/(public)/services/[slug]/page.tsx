@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { getServiceBySlug, getServices } from "@/lib/api";
 import { notFound } from "next/navigation";
 import Image from "next/image";
+import { getSiteUrl } from "@/lib/site-url";
 
 export const dynamic = "force-dynamic";
 
@@ -42,7 +43,7 @@ export default async function ServiceDetails({ params }: { params: Promise<{ slu
   const videoUrl = service.videoUrl || "";
 
   const phone = process.env.NEXT_PUBLIC_PHONE_NUMBER || "966556741880";
-  const baseUrl = process.env.NEXT_PUBLIC_SITE_URL || "http://localhost:3000";
+  const baseUrl = getSiteUrl();
 
   const localBusinessSchema = {
     "@context": "https://schema.org",

@@ -6,6 +6,7 @@ import QuoteForm from "@/components/QuoteForm";
 import ServiceCard from "@/components/ServiceCard";
 import { getServices, getProjects } from "@/lib/api";
 import { HOMEPAGE_SEO_DESCRIPTION, LOCAL_AREAS, SEO_KEYWORDS } from "@/lib/seo";
+import { getSiteUrl } from "@/lib/site-url";
 
 export const metadata: Metadata = {
   title: "مقاولات عامة بالدمام | دهانات، عزل أسطح، مظلات وسواتر، جبس وديكور",
@@ -16,6 +17,7 @@ export const metadata: Metadata = {
 
 export default async function HomePage() {
   const services = await getServices();
+  const siteUrl = getSiteUrl();
   const settings = {
     name: "مقاولات عامة الدمام",
     phone: process.env.NEXT_PUBLIC_PHONE_NUMBER || "966556741880",
@@ -28,7 +30,7 @@ export default async function HomePage() {
     name: settings.name,
     areaServed: LOCAL_AREAS,
     telephone: `+${settings.phone}`,
-    url: process.env.NEXT_PUBLIC_SITE_URL || "http://localhost:3000",
+    url: siteUrl,
     sameAs: [`https://wa.me/${settings.wa}`],
     serviceType: ["دهانات", "عزل أسطح", "مظلات وسواتر", "أعمال حديد", "برجولات", "إيبوكسي", "جبس وديكورات"]
   };
