@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import ConfirmDeleteModal from "./ConfirmDeleteModal";
 import type { Service } from "@/lib/types";
@@ -834,6 +835,9 @@ export default function AdminServicesPage() {
                       <button className="btn btn-outline" type="button" onClick={() => handleEdit(item)}>
                         تعديل
                       </button>
+                      <Link className="btn btn-outline" href={`/admin/services/${item.id}`}>
+                        صفحة SEO
+                      </Link>
                       <button className="btn btn-outline" type="button" onClick={() => setDeleteTarget(item)}>
                         حذف
                       </button>

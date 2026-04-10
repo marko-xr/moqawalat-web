@@ -15,6 +15,7 @@ import blogRoutes from "./routes/blog.routes.js";
 import leadsRoutes from "./routes/leads.routes.js";
 import settingsRoutes from "./routes/settings.routes.js";
 import analyticsRoutes from "./routes/analytics.routes.js";
+import serviceSeoRoutes from "./routes/service-seo.routes.js";
 
 export const app = express();
 app.set("trust proxy", 1);
@@ -92,6 +93,7 @@ app.get("/api/debug/routes", (_req, res) => {
       "/api/projects/:slug",
       "/api/blog",
       "/api/blog/:slug",
+      "/api/service-seo/by-slug/:slug",
       "/api/settings",
       "/api/leads",
       "/api/analytics"
@@ -103,6 +105,7 @@ app.use("/api/auth", authRoutes);
 app.use("/api/services", servicesRoutes);
 app.use("/api/projects", projectsRoutes);
 app.use("/api/blog", blogRoutes);
+app.use("/api/service-seo", serviceSeoRoutes);
 app.use("/api/leads", leadsRoutes);
 app.use("/api/settings", settingsRoutes);
 app.use("/api/analytics", analyticsRoutes);

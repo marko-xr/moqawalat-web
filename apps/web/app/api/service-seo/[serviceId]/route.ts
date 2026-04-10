@@ -1,0 +1,141 @@
+import { cookies } from "next/headers";
+import { NextResponse } from "next/server";
+
+const API_URL = process.env.API_URL || process.env.NEXT_PUBLIC_API_URL || "http://localhost:4000/api";
+const API_ORIGIN = API_URL.replace(/\/api\/?$/, "");
+
+type ProxyErrorPayload = {
+  message?: string;
+  code?: string;
+  errors?: Array<{ msg?: string; path?: string; param?: string }>;
+};
+
+async function readProxyErrorPayload(response: Response): Promise<ProxyErrorPayload> {
+  const text = await response.text();
+
+  if (!text) {
+    return {};
+  }
+
+  try {
+    return JSON.parse(text) as ProxyErrorPayload;
+  } catch {
+    return { message: text.slice(0, 500) };
+  }
+}
+
+function normalizeMediaUrl(value?: string | null) {
+  if (!value) {
+    return value;
+  }
+
+  if (value.startsWith("http://") || value.startsWith("https://") || value.startsWith("data:")) {
+    return value;
+  }
+
+  if (value.startsWith("/uploads/")) {
+    return `${API_ORIGIN}${value}`;
+  }
+
+  if (value.startsWith("uploads/")) {
+    return `${API_ORIGIN}/${value}`;
+  }
+
+  return value;
+}
+
+function normalizeSeoPayload(payload: any) {
+  const contentSections = payload?.seoPage?.contentSections && typeof payload.seoPage.contentSections === "object"
+    ? payload.seoPage.contentSections
+    : {};
+
+  return {
+    ...payload,
+    service: {
+      ...payload?.service,
+      imageUrl: normalizeMediaUrl(payload?.service?.imageUrl),
+      coverImage: normalizeMediaUrl(payload?.service?.coverImage),
+      gallery: Array.isArray(payload?.service?.gallery)
+        ? payload.service.gallery.map((item: string) => normalizeMediaUrl(item) || item)
+        : payload?.service?.gallery
+    },
+    seoPage: {
+      ...payload?.seoPage,
+      images: Array.isArray(payload?.seoPage?.images)
+        ? payload.seoPage.images.map((item: string) => normalizeMediaUrl(item) || item)
+        : [],
+      contentSections: {
+        ...contentSections,
+        heroImage: normalizeMediaUrl(contentSections?.heroImage),
+        beforeImage: normalizeMediaUrl(contentSections?.beforeImage),
+        afterImage: normalizeMediaUrl(contentSections?.afterImage)
+      }
+    }
+  };
+}
+
+export async function GET(_request: Request, context: { params: Promise<{ serviceId: string }> }) {
+  const token = (await cookies()).get("admin_token")?.value;
+
+  if (!token) {
+    return NextResponse.json({ message: "غير مصرح" }, { status: 401 });
+  }
+
+  const { serviceId } = await context.params;
+
+  const response = await fetch(`${API_URL}/service-seo/admin/service/${serviceId}`, {
+    method: "GET",
+    cache: "no-store",
+    headers: {
+      Authorization: `Bearer ${token}`
+    }
+  });
+
+  const payload = await readProxyErrorPayload(response);
+
+  if (!response.ok) {
+    return NextResponse.json(
+      {
+        ...payload,
+        message: payload.message || (response.status === 404 ? "الخدمة غير موجودة." : "تعذر تحميل صفحة SEO.")
+      },
+      { status: response.status }
+    );
+  }
+
+  return NextResponse.json(normalizeSeoPayload(payload), { status: response.status });
+}
+
+export async function PUT(request: Request, context: { params: Promise<{ serviceId: string }> }) {
+  const token = (await cookies()).get("admin_token")?.value;
+
+  if (!token) {
+    return NextResponse.json({ message: "غير مصرح" }, { status: 401 });
+  }
+
+  const { serviceId } = await context.params;
+  const formData = await request.formData();
+
+  const response = await fetch(`${API_URL}/service-seo/admin/service/${serviceId}`, {
+    method: "PUT",
+    cache: "no-store",
+    headers: {
+      Authorization: `Bearer ${token}`
+    },
+    body: formData
+  });
+
+  const payload = await readProxyErrorPayload(response);
+
+  if (!response.ok) {
+    return NextResponse.json(
+      {
+        ...payload,
+        message: payload.message || "تعذر حفظ صفحة SEO."
+      },
+      { status: response.status }
+    );
+  }
+
+  return NextResponse.json(payload, { status: response.status });
+}

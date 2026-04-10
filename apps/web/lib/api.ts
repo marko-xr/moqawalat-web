@@ -1,3 +1,5 @@
+import type { ServiceSeoPage } from "@/lib/types";
+
 const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:4000/api";
 const REQUEST_TIMEOUT_MS = 8000;
 const DEFAULT_REVALIDATE_SECONDS = 120;
@@ -102,6 +104,21 @@ function normalizeBlogPost(post: any) {
   };
 }
 
+function normalizeServiceSeoPage(page: any): ServiceSeoPage {
+  const contentSections = page?.contentSections && typeof page.contentSections === "object" ? page.contentSections : {};
+
+  return {
+    ...page,
+    images: Array.isArray(page?.images) ? page.images.map((item: string) => normalizeMediaUrl(item) || item) : [],
+    contentSections: {
+      ...contentSections,
+      heroImage: normalizeMediaUrl(contentSections?.heroImage),
+      beforeImage: normalizeMediaUrl(contentSections?.beforeImage),
+      afterImage: normalizeMediaUrl(contentSections?.afterImage)
+    }
+  };
+}
+
 async function request<T>(path: string, init?: RequestInit): Promise<T> {
   const controller = new AbortController();
   const timeoutId = setTimeout(() => controller.abort(), REQUEST_TIMEOUT_MS);
@@ -158,6 +175,15 @@ export async function getServiceBySlug(slug: string) {
   } catch {
     const fallback = DEFAULT_SERVICES_FALLBACK.find((service) => service.slug === slug);
     return fallback ? normalizeService(fallback) : null;
+  }
+}
+
+export async function getServiceSeoPageBySlug(slug: string) {
+  try {
+    const page = await request<any>(`/service-seo/by-slug/${slug}`);
+    return normalizeServiceSeoPage(page);
+  } catch {
+    return null;
   }
 }
 

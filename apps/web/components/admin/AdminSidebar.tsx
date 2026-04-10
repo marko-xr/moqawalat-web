@@ -51,6 +51,14 @@ const navItems = [
 export default function AdminSidebar() {
   const pathname = usePathname();
 
+  function isActiveRoute(href: string) {
+    if (href === "/admin") {
+      return pathname === href;
+    }
+
+    return pathname === href || pathname.startsWith(`${href}/`);
+  }
+
   async function logout() {
     localStorage.removeItem("admin_token");
     await fetch("/api/auth/logout", { method: "POST" });
@@ -69,7 +77,7 @@ export default function AdminSidebar() {
           <Link
             key={item.href}
             href={item.href}
-            className={`admin-nav-link${pathname === item.href ? " is-active" : ""}`}
+            className={`admin-nav-link${isActiveRoute(item.href) ? " is-active" : ""}`}
           >
             <span className="admin-nav-icon">{item.icon}</span>
             {item.label}

@@ -1152,6 +1152,156 @@ footer {
   color: var(--text);
 }
 
+.roof-page {
+  display: grid;
+  gap: 1rem;
+}
+
+.roof-hero {
+  display: grid;
+  gap: 1rem;
+  align-items: start;
+}
+
+.roof-hero-content {
+  display: grid;
+  gap: 0.75rem;
+}
+
+.roof-hero-lead {
+  margin: 0;
+  color: var(--muted);
+  line-height: 1.9;
+}
+
+.roof-hero-points {
+  margin: 0;
+  padding-inline-start: 1rem;
+  display: grid;
+  gap: 0.35rem;
+}
+
+.roof-hero-media {
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  overflow: hidden;
+  background: #edf5f3;
+}
+
+.roof-hero-media img {
+  width: 100%;
+  height: auto;
+  display: block;
+}
+
+.roof-cta-box {
+  display: grid;
+  gap: 0.7rem;
+}
+
+.roof-cta-box h2,
+.roof-cta-box p {
+  margin: 0;
+}
+
+.roof-cta-box p {
+  color: var(--muted);
+}
+
+.roof-trust-grid,
+.roof-services-grid,
+.roof-links-grid {
+  display: grid;
+  gap: 0.8rem;
+}
+
+.roof-trust h2,
+.roof-faq h2,
+.roof-services h2,
+.roof-links h2,
+.roof-areas h2 {
+  margin: 0 0 0.6rem;
+}
+
+.roof-section-intro {
+  margin: 0 0 0.9rem;
+  color: var(--muted);
+}
+
+.roof-service-card {
+  display: grid;
+  gap: 0.6rem;
+}
+
+.roof-service-card h3,
+.roof-service-card p {
+  margin: 0;
+}
+
+.roof-service-image {
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  overflow: hidden;
+}
+
+.roof-service-image img {
+  width: 100%;
+  height: auto;
+  display: block;
+}
+
+.roof-areas p {
+  margin: 0 0 0.6rem;
+  color: var(--muted);
+}
+
+.roof-areas-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+}
+
+.roof-areas-list span {
+  border: 1px solid #d3e4df;
+  border-radius: 999px;
+  padding: 0.35rem 0.75rem;
+  background: #f2f9f7;
+  font-weight: 700;
+}
+
+.roof-faq-list {
+  display: grid;
+  gap: 0.75rem;
+}
+
+.roof-faq-item summary {
+  list-style: none;
+  cursor: pointer;
+}
+
+.roof-faq-item summary::-webkit-details-marker {
+  display: none;
+}
+
+.roof-faq-item h3 {
+  margin: 0;
+  font-size: 1.03rem;
+}
+
+.roof-faq-item p {
+  margin: 0.55rem 0 0;
+  color: var(--muted);
+  line-height: 1.85;
+}
+
+.roof-links-grid a {
+  border: 1px solid #d2e3de;
+  border-radius: 10px;
+  padding: 0.65rem 0.8rem;
+  background: #f6fbfa;
+  font-weight: 700;
+}
+
 @keyframes skeleton-wave {
   0% {
     background-position: 200% 0;
@@ -1218,6 +1368,18 @@ footer {
 
   .hero-main-image-wrap {
     min-height: 220px;
+  }
+}
+
+@media (min-width: 900px) {
+  .roof-hero {
+    grid-template-columns: 1.1fr 1fr;
+  }
+
+  .roof-trust-grid,
+  .roof-services-grid,
+  .roof-links-grid {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
   }
 }
 

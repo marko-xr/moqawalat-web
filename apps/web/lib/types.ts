@@ -17,6 +17,62 @@ export type Service = {
   updatedAt?: string;
 };
 
+export type ServiceSeoFaqItem = {
+  question: string;
+  answer: string;
+};
+
+export type ServiceSeoTrustItem = {
+  title: string;
+  description: string;
+};
+
+export type ServiceSeoServiceItem = {
+  title: string;
+  description: string;
+  imageAlt?: string;
+};
+
+export type ServiceSeoRelatedLink = {
+  title: string;
+  href: string;
+};
+
+export type ServiceSeoContentSections = {
+  heroTitle?: string;
+  heroLead?: string;
+  heroPoints?: string[];
+  trustItems?: ServiceSeoTrustItem[];
+  serviceItems?: ServiceSeoServiceItem[];
+  areas?: string[];
+  relatedLinks?: ServiceSeoRelatedLink[];
+  ctaTopTitle?: string;
+  ctaTopDescription?: string;
+  ctaBottomTitle?: string;
+  ctaBottomDescription?: string;
+  heroImage?: string | null;
+  beforeImage?: string | null;
+  afterImage?: string | null;
+};
+
+export type ServiceSeoPage = {
+  id?: string | null;
+  serviceId: string;
+  title: string;
+  slug: string;
+  metaTitle?: string | null;
+  metaDescription?: string | null;
+  contentSections?: ServiceSeoContentSections | null;
+  images?: string[];
+  faq?: ServiceSeoFaqItem[];
+  updatedAt?: string;
+};
+
+export type ServiceSeoAdminPayload = {
+  service: Service;
+  seoPage: ServiceSeoPage;
+};
+
 export type Project = {
   id: string;
   titleAr: string;
