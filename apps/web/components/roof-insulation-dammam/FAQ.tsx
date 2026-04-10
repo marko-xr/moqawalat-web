@@ -33,12 +33,13 @@ export const roofFaqItems: FAQItem[] = [
 
 type FAQProps = {
   items?: FAQItem[];
+  heading?: string;
 };
 
-export default function FAQ({ items = roofFaqItems }: FAQProps) {
+export default function FAQ({ items = roofFaqItems, heading = "الأسئلة الشائعة عن عزل الأسطح" }: FAQProps) {
   return (
     <section className="roof-faq" aria-labelledby="roof-faq-heading">
-      <h2 id="roof-faq-heading">الأسئلة الشائعة عن عزل الأسطح</h2>
+      <h2 id="roof-faq-heading">{heading}</h2>
       <div className="roof-faq-list">
         {items.map((item, index) => (
           <details key={`${item.question}-${index}`} className="card roof-faq-item">

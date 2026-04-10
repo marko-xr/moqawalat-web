@@ -21,14 +21,14 @@ export default function Header() {
             width={190}
             height={82}
             className="brand-logo"
-            priority
+            sizes="190px"
           />
           <span className="brand-name">مقاولات عامة الدمام</span>
         </Link>
 
         <nav className="nav-links" aria-label="التنقل الرئيسي">
           {links.map((item) => (
-            <Link key={item.href} href={item.href}>
+            <Link key={item.href} href={item.href} prefetch={false}>
               {item.label}
             </Link>
           ))}

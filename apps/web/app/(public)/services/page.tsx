@@ -3,6 +3,8 @@ import ServiceCard from "@/components/ServiceCard";
 import { getServices } from "@/lib/api";
 import { SEO_KEYWORDS } from "@/lib/seo";
 
+export const revalidate = 300;
+
 export const metadata: Metadata = {
   title: "الخدمات",
   description: "اكتشف خدماتنا في الدهانات والعزل والأعمال الحديدية والجبس والديكور بالدمام.",

@@ -4,7 +4,20 @@ import { getSiteUrl } from "@/lib/site-url";
 
 export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   const base = getSiteUrl();
-  const staticRoutes = ["", "/about", "/services", "/projects", "/blog", "/contact", "/roof-insulation-dammam"];
+  const staticRoutes = [
+    "",
+    "/about",
+    "/services",
+    "/projects",
+    "/blog",
+    "/contact",
+    "/roof-insulation-dammam",
+    "/gypsum-decorations-dammam",
+    "/metal-works-hangars-pergolas-dammam",
+    "/painting-services-dammam",
+    "/epoxy-flooring-dammam",
+    "/iron-works-shades-screens-dammam"
+  ];
 
   const [services, projects, posts] = await Promise.all([getServices(), getProjects(), getBlogPosts()]);
   const now = new Date();

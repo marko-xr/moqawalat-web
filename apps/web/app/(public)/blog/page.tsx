@@ -4,6 +4,8 @@ import type { Metadata } from "next";
 import { getBlogPosts } from "@/lib/api";
 import { SEO_KEYWORDS } from "@/lib/seo";
 
+export const revalidate = 300;
+
 export const metadata: Metadata = {
   title: "مدونة المقاولات بالدمام",
   description: "مقالات عملية عن الدهانات والعزل والمظلات والسواتر والجبس والديكور في الدمام والخبر والظهران والقطيف.",
@@ -56,7 +58,7 @@ export default async function BlogPage() {
                 </div>
                 <h3>{post.titleAr}</h3>
                 <p>{post.excerptAr}</p>
-                <Link className="btn btn-outline" href={`/blog/${post.slug}`}>
+                <Link className="btn btn-outline" href={`/blog/${post.slug}`} prefetch={false}>
                   قراءة المقال
                 </Link>
               </article>

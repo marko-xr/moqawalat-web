@@ -2,7 +2,7 @@ import type { ServiceSeoPage } from "@/lib/types";
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:4000/api";
 const REQUEST_TIMEOUT_MS = 8000;
-const DEFAULT_REVALIDATE_SECONDS = 120;
+const DEFAULT_REVALIDATE_SECONDS = 300;
 const API_ORIGIN = API_URL.replace(/\/api\/?$/, "");
 
 const DEFAULT_SERVICES_FALLBACK = [
@@ -170,7 +170,7 @@ export async function getServices() {
 
 export async function getServiceBySlug(slug: string) {
   try {
-    const service = await request<any>(`/services/${slug}`, { cache: "no-store" });
+    const service = await request<any>(`/services/${slug}`);
     return normalizeService(service);
   } catch {
     const fallback = DEFAULT_SERVICES_FALLBACK.find((service) => service.slug === slug);

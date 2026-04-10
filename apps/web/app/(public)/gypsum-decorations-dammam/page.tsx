@@ -9,11 +9,11 @@ import { getSiteUrl } from "@/lib/site-url";
 
 export const revalidate = 300;
 
-const pagePath = "/roof-insulation-dammam";
-const pageSlug = "roof-insulation-dammam";
-const legacyServiceSlug = "roof-insulation";
+const pagePath = "/gypsum-decorations-dammam";
+const pageSlug = "gypsum-decorations-dammam";
+const legacyServiceSlug = "gypsum-decorations";
 
-type RoofPageModel = {
+type GypsumPageModel = {
   pageTitle: string;
   pageDescription: string;
   heroTitle: string;
@@ -36,86 +36,118 @@ type RoofPageModel = {
   metaDescription: string;
 };
 
-const defaultModel: RoofPageModel = {
-  pageTitle: "عزل أسطح بالدمام",
-  pageDescription: "خدمة عزل أسطح بالدمام والخبر والظهران والقطيف. عزل مائي وحراري وفوم مع معاينة سريعة.",
-  heroTitle: "عزل أسطح بالدمام يحمي المبنى من التسربات والحرارة",
-  heroLead:
-    "إذا كنت تعاني من تسرب المياه أو ارتفاع حرارة السطح، نقدم لك حلول عزل مائي وحراري احترافية بضمان واضح ومعاينة سريعة داخل الدمام والخبر والظهران والقطيف.",
+const defaultModel: GypsumPageModel = {
+  pageTitle: "الجبس والديكورات",
+  pageDescription: "ديكورات جبسية عصرية وأسقف مستعارة وتشطيبات داخلية في الدمام والخبر والظهران.",
+  heroTitle: "الجبس والديكورات",
+  heroLead: "نصمم حلول جبس وديكور تعكس ذوقك، مع تنفيذ دقيق وتشطيبات فاخرة للمنازل والمكاتب والمعارض.",
   heroPoints: [
-    "معاينة مجانية وتقييم فني قبل التنفيذ.",
-    "مواد عزل معتمدة مناسبة لأجواء المنطقة الشرقية.",
-    "تنفيذ سريع ونظيف مع التزام كامل بالجودة."
+    "تصاميم جبس بورد مودرن تناسب كل المساحات.",
+    "تشطيبات داخلية فاخرة مع عناية بالتفاصيل.",
+    "تنسيق احترافي للإضاءة والديكور النهائي."
   ],
   heroImage: "/images/placeholder-before.svg",
   trustItems: [
     {
-      title: "خبرة ميدانية في المنطقة الشرقية",
-      description: "نفهم تحديات المناخ المحلي ونختار مواد العزل المناسبة لكل حالة."
+      title: "دقة تشطيب عالية",
+      description: "نلتزم باستواء الأسطح ونظافة الزوايا والتفاصيل النهائية لإخراج ديكور فخم ومتناسق."
     },
     {
-      title: "جودة تنفيذ وضمان واضح",
-      description: "تنفيذ احترافي بإشراف فني مع توثيق مراحل العمل قبل التسليم."
+      title: "خامات مناسبة للمناخ",
+      description: "نستخدم خامات جبسية مناسبة للرطوبة مع تنفيذ احترافي يضمن ثبات الشكل والجودة."
     },
     {
-      title: "أسعار واضحة بدون مفاجآت",
-      description: "عرض سعر تفصيلي يشمل نطاق العمل والمواد والمدة والضمان."
+      title: "تنفيذ منظم وسريع",
+      description: "جدولة واضحة للعمل مع تسليم منظم يحافظ على نظافة الموقع وسرعة الإنجاز."
     }
   ],
-  serviceHeading: "تفاصيل خدمة عزل الأسطح",
-  serviceIntro: "نختار نوع العزل بعد فحص السطح وحالته الحالية، لضمان أفضل نتيجة حسب طبيعة المبنى والميزانية.",
+  serviceHeading: "تفاصيل خدمة الجبس والديكورات",
+  serviceIntro: "من الأسقف المستعارة إلى بديل الخشب وديكورات الشاشات، نقدم حلول ديكور متكاملة بلمسات عصرية.",
   serviceItems: [
     {
-      title: "عزل مائي للأسطح",
-      description: "معالجة كاملة لمنع تسربات مياه الأمطار وحماية الخرسانة من التآكل والرطوبة.",
-      imageAlt: "تنفيذ عزل مائي للأسطح في الدمام"
+      title: "الصورة 1 - دهانات جوتن أصلية",
+      description:
+        "متخصصون في تطبيق دهانات جوتن (Jotun) الأصلية بألوانها الأكثر طلبا مثل (فانيلا لاتيه، بريز، لايمستون). نضمن لك ملمسا ناعما وتغطية مثالية للجدران، مع معالجة كاملة للعيوب قبل الصبغ لضمان نتيجة نهائية مبهرة تعكس ذوقك الرفيع.",
+      imageAlt: "دهانات جوتن أصلية للديكورات الداخلية في الدمام"
     },
     {
-      title: "عزل حراري للأسطح",
-      description: "تقليل انتقال الحرارة للدور الأخير لخفض استهلاك التكييف وتحسين الراحة داخل المنزل.",
-      imageAlt: "عزل حراري للأسطح في المنطقة الشرقية"
+      title: "الصورة 2 - تشطيب جدران فاخر",
+      description:
+        "متخصصون في تطبيق دهانات جوتن (Jotun) الأصلية بألوانها الأكثر طلبا مثل (فانيلا لاتيه، بريز، لايمستون). نضمن لك ملمسا ناعما وتغطية مثالية للجدران، مع معالجة كاملة للعيوب قبل الصبغ لضمان نتيجة نهائية مبهرة تعكس ذوقك الرفيع.",
+      imageAlt: "تشطيب جدران داخلي فاخر بالدمام"
     },
     {
-      title: "عزل فوم (PU Foam)",
-      description: "حل متكامل يجمع بين العزل الحراري والمائي مع تغطية متجانسة للأسطح الصعبة.",
-      imageAlt: "عزل اسطح فوم في الدمام"
+      title: "الصورة 3 - أسقف جبس بورد متعددة المستويات",
+      description:
+        "تصميم وتركيب أسقف الجبس بورد متعددة المستويات للغرف الواسعة والمجالس. نستخدم أجود أنواع الجبس المقاوم للرطوبة، مع مراعاة توزيع الإضاءة المركزية والجانبية لإضافة فخامة استثنائية على المكان بلمسات تشطيب احترافية.",
+      imageAlt: "أسقف جبس بورد متعددة المستويات في الدمام"
+    },
+    {
+      title: "الصورة 4 - جبس مودرن بإضاءة مخفية",
+      description:
+        "تنفيذ أرقى تصاميم الجبس بورد المودرن مع نظام الإضاءة المخفية (Indirect Lighting). نركز على الدقة في استواء السطح ونظافة الزوايا لتعطي مظهرا واسعا ومريحا للصالات والممرات، مع دمج فتحات التكييف والسبوت لايت بشكل هندسي أنيق.",
+      imageAlt: "تصميم جبس مودرن مع إضاءة مخفية"
+    },
+    {
+      title: "الصورة 5 - تشطيب مجالس وغرف",
+      description:
+        "تصميم وتركيب أسقف الجبس بورد متعددة المستويات للغرف الواسعة والمجالس. نستخدم أجود أنواع الجبس المقاوم للرطوبة، مع مراعاة توزيع الإضاءة المركزية والجانبية لإضافة فخامة استثنائية على المكان بلمسات تشطيب احترافية.",
+      imageAlt: "تشطيب جبس للمجالس والغرف في الدمام"
+    },
+    {
+      title: "الصورة 6 - ممرات وصالات جبس بورد",
+      description:
+        "تنفيذ أرقى تصاميم الجبس بورد المودرن مع نظام الإضاءة المخفية (Indirect Lighting). نركز على الدقة في استواء السطح ونظافة الزوايا لتعطي مظهرا واسعا ومريحا للصالات والممرات، مع دمج فتحات التكييف والسبوت لايت بشكل هندسي أنيق.",
+      imageAlt: "تصاميم جبس بورد للممرات والصالونات"
+    },
+    {
+      title: "الصورة 7 - تجهيز ودهان احترافي",
+      description:
+        "متخصصون في تطبيق دهانات جوتن (Jotun) الأصلية بألوانها الأكثر طلبا مثل (فانيلا لاتيه، بريز، لايمستون). نضمن لك ملمسا ناعما وتغطية مثالية للجدران، مع معالجة كاملة للعيوب قبل الصبغ لضمان نتيجة نهائية مبهرة تعكس ذوقك الرفيع.",
+      imageAlt: "تجهيز ودهان جدران احترافي بالدمام"
+    },
+    {
+      title: "الصورة 8 - بديل الخشب وديكورات الشاشات",
+      description:
+        "بديل الخشب، ديكورات شاشات، دهانات مودرن، تجديد شقق بالدمام. تركيب ديكورات بديل الخشب (WPC) ودهانات الجدران المودرن لتجديد الصالات وغرف النوم. نوفر حلولا مبتكرة لتنسيق الإضاءة مع الخلفيات الخشبية لتعطي مظهرا أنيقا وعصريا للمنازل والمكاتب في المنطقة الشرقية.",
+      imageAlt: "بديل الخشب وديكورات الشاشات في الدمام"
     }
   ],
   serviceImage: "/images/placeholder-after.svg",
   areas: ["الدمام", "الخبر", "الظهران", "القطيف"],
   relatedLinks: [
+    { title: "عزل الأسطح بالدمام", href: "/roof-insulation-dammam" },
     { title: "خدمات الدهانات الداخلية والخارجية", href: "/services/painting-services" },
-    { title: "الأعمال الحديدية والمظلات", href: "/services/metal-works" },
-    { title: "الجبس والديكورات", href: "/services/gypsum-decorations" }
+    { title: "الأعمال الحديدية والمظلات", href: "/services/metal-works" }
   ],
-  ctaTopTitle: "هل تعاني من تسربات السطح؟",
-  ctaTopDescription: "تواصل معنا الآن واحصل على معاينة سريعة وخطة عزل مناسبة لمبناك في الدمام.",
-  ctaBottomTitle: "جاهز لبدء العزل الآن؟",
-  ctaBottomDescription: "اتصل أو راسلنا واتساب وسيتم تحديد موعد المعاينة بأسرع وقت.",
+  ctaTopTitle: "جاهز لتجديد الديكور الداخلي؟",
+  ctaTopDescription: "تواصل معنا الآن وخذ استشارة سريعة لأفضل تصميم جبس وديكور مناسب لمساحتك.",
+  ctaBottomTitle: "ابدأ مشروع الجبس والديكور اليوم",
+  ctaBottomDescription: "اتصل أو راسلنا عبر واتساب لحجز معاينة سريعة في الدمام والمنطقة الشرقية.",
   faqItems: [
     {
-      question: "ما أفضل نوع عزل أسطح في الدمام؟",
-      answer: "يعتمد على حالة السطح، لكن غالبا العزل المائي مع العزل الحراري أو عزل الفوم هو الأنسب لأجواء الدمام الحارة والرطبة."
+      question: "ما أفضل نوع جبس بورد للصالات والمجالس؟",
+      answer: "يتم تحديد النوع حسب المساحة ومستوى الرطوبة، ونوصي عادة بخامات مقاومة للرطوبة مع هيكل تثبيت احترافي."
     },
     {
-      question: "كم تستغرق مدة تنفيذ عزل السطح؟",
-      answer: "في أغلب المشاريع السكنية من يوم إلى 3 أيام حسب مساحة السطح وتجهيزاته وحالة الطبقات القديمة."
+      question: "هل يمكن دمج الإضاءة المخفية مع تصميم الجبس؟",
+      answer: "نعم، يتم تصميم مسارات الإضاءة والسبوت لايت ضمن المخطط لضمان توزيع متوازن وشكل نهائي أنيق."
     },
     {
-      question: "هل العزل يقلل فاتورة الكهرباء؟",
-      answer: "نعم، العزل الحراري الجيد يقلل انتقال الحرارة للدور العلوي، وهذا يساعد في تقليل تشغيل المكيف لفترات طويلة."
+      question: "كم يستغرق تنفيذ أعمال الجبس والديكور؟",
+      answer: "يعتمد على المساحة وتعقيد التصميم، وغالبا يبدأ من يومين إلى عدة أيام مع جدول واضح قبل التنفيذ."
     },
     {
-      question: "هل تقدمون ضمان على عزل الأسطح؟",
-      answer: "نعم، نقدم ضمان مكتوب حسب نوع المادة ونطاق العمل المتفق عليه بعد المعاينة."
+      question: "هل تقدمون خدمة بديل الخشب وديكورات الشاشات؟",
+      answer: "نعم، نوفر تصميم وتركيب بديل الخشب (WPC) وديكورات الشاشات مع تنسيق الألوان والإضاءة."
     },
     {
-      question: "هل تخدمون الخبر والظهران والقطيف؟",
-      answer: "نعم، فريقنا يخدم الدمام والخبر والظهران والقطيف وكامل المنطقة الشرقية مع مواعيد معاينة مرنة."
+      question: "هل الخدمة متاحة في الخبر والظهران؟",
+      answer: "نعم، نقدم الخدمة في الدمام والخبر والظهران والقطيف وكامل المنطقة الشرقية."
     }
   ],
-  metaTitle: "عزل أسطح بالدمام | عزل مائي وحراري بضمان",
-  metaDescription: "خدمة عزل أسطح بالدمام والخبر والظهران والقطيف. عزل مائي وحراري وفوم مع معاينة سريعة. اتصل الآن واحصل على عرض سعر."
+  metaTitle: "ديكورات جبس بالدمام | تصميم وتنفيذ | مقاولات عامة الدمام",
+  metaDescription: "الجبس والديكورات بالدمام: أسقف مستعارة، جبس بورد مودرن، بديل الخشب، وتشطيبات داخلية فاخرة للمنازل والمكاتب."
 };
 
 function toString(value: unknown) {
@@ -236,7 +268,7 @@ async function getSeoSource() {
   return getServiceSeoPageBySlug(legacyServiceSlug);
 }
 
-function buildModel(source: Awaited<ReturnType<typeof getSeoSource>>): RoofPageModel {
+function buildModel(source: Awaited<ReturnType<typeof getSeoSource>>): GypsumPageModel {
   if (!source) {
     return defaultModel;
   }
@@ -323,7 +355,7 @@ export async function generateMetadata(): Promise<Metadata> {
   };
 }
 
-export default async function RoofInsulationDammamPage() {
+export default async function GypsumDecorationsDammamPage() {
   const model = buildModel(await getSeoSource());
   const siteUrl = getSiteUrl();
   const pageUrl = `${siteUrl}${pagePath}`;
@@ -343,7 +375,7 @@ export default async function RoofInsulationDammamPage() {
     "@type": "Service",
     name: model.pageTitle,
     description: model.pageDescription,
-    serviceType: "Roof Insulation",
+    serviceType: "Gypsum and Interior Decorations",
     provider: {
       "@type": "LocalBusiness",
       name: "مقاولات عامة الدمام",
@@ -369,22 +401,12 @@ export default async function RoofInsulationDammamPage() {
   return (
     <section className="section">
       <div className="container roof-page">
-        <Hero
-          title={model.heroTitle}
-          lead={model.heroLead}
-          points={model.heroPoints}
-          imageSrc={model.heroImage}
-          imageAlt={model.heroTitle}
-        />
+        <Hero title={model.heroTitle} lead={model.heroLead} points={model.heroPoints} imageSrc={model.heroImage} imageAlt={model.heroTitle} />
 
-        <CTA
-          title={model.ctaTopTitle}
-          description={model.ctaTopDescription}
-          eventSource="hero-cta"
-        />
+        <CTA title={model.ctaTopTitle} description={model.ctaTopDescription} eventSource="hero-cta" />
 
-        <section className="roof-trust" aria-labelledby="roof-trust-heading">
-          <h2 id="roof-trust-heading">لماذا يختارنا العملاء في الدمام؟</h2>
+        <section className="roof-trust" aria-labelledby="gypsum-trust-heading">
+          <h2 id="gypsum-trust-heading">لماذا يختارنا العملاء في الدمام؟</h2>
           <div className="roof-trust-grid">
             {model.trustItems.map((item, index) => (
               <article className="card" key={`${item.title}-${index}`}>
@@ -395,16 +417,11 @@ export default async function RoofInsulationDammamPage() {
           </div>
         </section>
 
-        <Services
-          heading={model.serviceHeading}
-          intro={model.serviceIntro}
-          items={model.serviceItems}
-          imageSrc={model.serviceImage}
-        />
+        <Services heading={model.serviceHeading} intro={model.serviceIntro} items={model.serviceItems} imageSrc={model.serviceImage} />
 
-        <section className="roof-areas card" aria-labelledby="roof-areas-heading">
-          <h2 id="roof-areas-heading">مناطق الخدمة</h2>
-          <p>نغطي خدمات عزل الأسطح في:</p>
+        <section className="roof-areas card" aria-labelledby="gypsum-areas-heading">
+          <h2 id="gypsum-areas-heading">مناطق الخدمة</h2>
+          <p>نغطي خدمات الجبس والديكورات في:</p>
           <div className="roof-areas-list">
             {model.areas.map((area) => (
               <span key={area}>{area}</span>
@@ -412,10 +429,10 @@ export default async function RoofInsulationDammamPage() {
           </div>
         </section>
 
-        <FAQ items={model.faqItems} />
+        <FAQ heading="الأسئلة الشائعة عن الجبس والديكورات" items={model.faqItems} />
 
-        <section className="card roof-links" aria-labelledby="roof-links-heading">
-          <h2 id="roof-links-heading">خدمات مرتبطة قد تهمك</h2>
+        <section className="card roof-links" aria-labelledby="gypsum-links-heading">
+          <h2 id="gypsum-links-heading">خدمات مرتبطة قد تهمك</h2>
           <div className="roof-links-grid">
             {model.relatedLinks.map((item) =>
               isExternalUrl(item.href) ? (
@@ -431,11 +448,7 @@ export default async function RoofInsulationDammamPage() {
           </div>
         </section>
 
-        <CTA
-          title={model.ctaBottomTitle}
-          description={model.ctaBottomDescription}
-          eventSource="footer-cta"
-        />
+        <CTA title={model.ctaBottomTitle} description={model.ctaBottomDescription} eventSource="footer-cta" />
       </div>
 
       <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(localBusinessSchema) }} />

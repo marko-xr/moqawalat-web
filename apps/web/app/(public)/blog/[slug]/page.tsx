@@ -4,6 +4,8 @@ import { getBlogBySlug, getBlogPosts } from "@/lib/api";
 import { notFound } from "next/navigation";
 import { SEO_KEYWORDS } from "@/lib/seo";
 
+export const revalidate = 300;
+
 export async function generateStaticParams() {
   const posts = await getBlogPosts();
   return posts.map((post) => ({ slug: post.slug }));

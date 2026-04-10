@@ -18,7 +18,7 @@ export default function ServiceCard({ service }: { service: Service }) {
       </div>
       <h3>{service.titleAr}</h3>
       <p>{service.shortDescAr}</p>
-      <Link href={`/services/${service.slug}`} className="btn btn-outline">
+      <Link href={`/services/${service.slug}`} className="btn btn-outline" prefetch={false}>
         تفاصيل الخدمة
       </Link>
     </article>

@@ -8,6 +8,8 @@ import { getServices, getProjects } from "@/lib/api";
 import { HOMEPAGE_SEO_DESCRIPTION, LOCAL_AREAS, SEO_KEYWORDS } from "@/lib/seo";
 import { getSiteUrl } from "@/lib/site-url";
 
+export const revalidate = 300;
+
 export const metadata: Metadata = {
   title: "مقاولات عامة بالدمام | دهانات، عزل أسطح، مظلات وسواتر، جبس وديكور",
   description: HOMEPAGE_SEO_DESCRIPTION,
