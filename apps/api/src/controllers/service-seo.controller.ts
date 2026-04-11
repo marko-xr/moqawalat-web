@@ -329,6 +329,59 @@ export async function getServiceSeoBySlug(req: Request, res: Response) {
   return res.json(mapServiceSeo(service));
 }
 
+export async function getServiceSeoByServiceSlug(req: Request, res: Response) {
+  const serviceSlug = String(req.params.slug || "").trim().toLowerCase();
+
+  if (!serviceSlug) {
+    return res.status(400).json({ message: "slug مطلوب" });
+  }
+
+  const service = await prisma.service.findUnique({
+    where: { slug: serviceSlug },
+    select: {
+      id: true,
+      titleAr: true,
+      slug: true,
+      shortDescAr: true,
+      contentAr: true,
+      seoTitleAr: true,
+      seoDescriptionAr: true,
+      coverImage: true,
+      gallery: true,
+      isPublished: true,
+      updatedAt: true
+    }
+  });
+
+  if (!service || !service.isPublished) {
+    return res.status(404).json({ message: "الصفحة غير موجودة" });
+  }
+
+  const page = await prisma.serviceSeoPage.findUnique({ where: { serviceId: service.id } });
+
+  if (!page) {
+    return res.json(mapServiceSeo(service));
+  }
+
+  return res.json(
+    enrichSeoPageWithService(
+      {
+        id: page.id,
+        serviceId: page.serviceId,
+        title: page.title,
+        slug: page.slug,
+        metaTitle: page.metaTitle,
+        metaDescription: page.metaDescription,
+        contentSections: page.contentSections,
+        images: page.images,
+        faq: page.faq,
+        updatedAt: page.updatedAt
+      },
+      service
+    )
+  );
+}
+
 export async function getServiceSeoByServiceIdAdmin(req: Request, res: Response) {
   const serviceId = req.params.serviceId;
 

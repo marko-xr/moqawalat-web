@@ -1,5 +1,6 @@
 import { cookies } from "next/headers";
 import { NextResponse } from "next/server";
+import { revalidatePath } from "next/cache";
 
 const API_URL = process.env.API_URL || process.env.NEXT_PUBLIC_API_URL || "http://localhost:4000/api";
 const API_ORIGIN = API_URL.replace(/\/api\/?$/, "");
@@ -9,6 +10,15 @@ type ProxyErrorPayload = {
   code?: string;
   errors?: Array<{ msg?: string; path?: string; param?: string }>;
 };
+
+const SEO_PUBLIC_PATHS = [
+  "/roof-insulation-dammam",
+  "/gypsum-decorations-dammam",
+  "/metal-works-hangars-pergolas-dammam",
+  "/painting-services-dammam",
+  "/epoxy-flooring-dammam",
+  "/iron-works-shades-screens-dammam"
+];
 
 async function readProxyErrorPayload(response: Response): Promise<ProxyErrorPayload> {
   const text = await response.text();
@@ -135,6 +145,19 @@ export async function PUT(request: Request, context: { params: Promise<{ service
       },
       { status: response.status }
     );
+  }
+
+  // Clear ISR caches so admin updates appear immediately on public SEO pages.
+  SEO_PUBLIC_PATHS.forEach((path) => revalidatePath(path));
+
+  const returnedSlug = String((payload as any)?.seoPage?.slug || "").trim();
+  if (returnedSlug) {
+    revalidatePath(`/${returnedSlug}`);
+  }
+
+  const returnedServiceSlug = String((payload as any)?.service?.slug || "").trim();
+  if (returnedServiceSlug) {
+    revalidatePath(`/services/${returnedServiceSlug}`);
   }
 
   return NextResponse.json(payload, { status: response.status });

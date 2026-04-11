@@ -189,6 +189,17 @@ export async function getServiceSeoPageBySlug(slug: string) {
   }
 }
 
+export async function getServiceSeoPageByServiceSlug(slug: string) {
+  try {
+    const page = await request<any>(`/service-seo/by-service-slug/${slug}`, {
+      next: { revalidate: 60 }
+    });
+    return normalizeServiceSeoPage(page);
+  } catch {
+    return null;
+  }
+}
+
 export async function getProjects() {
   try {
     const projects = await request<any[]>("/projects");

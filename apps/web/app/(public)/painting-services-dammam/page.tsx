@@ -4,7 +4,7 @@ import Hero from "@/components/roof-insulation-dammam/Hero";
 import Services from "@/components/roof-insulation-dammam/Services";
 import FAQ from "@/components/roof-insulation-dammam/FAQ";
 import CTA from "@/components/roof-insulation-dammam/CTA";
-import { getServiceSeoPageBySlug } from "@/lib/api";
+import { getServiceSeoPageByServiceSlug, getServiceSeoPageBySlug } from "@/lib/api";
 import { getSiteUrl } from "@/lib/site-url";
 
 export const revalidate = 300;
@@ -286,6 +286,11 @@ async function getSeoSource() {
   const primary = await getServiceSeoPageBySlug(pageSlug);
   if (primary) {
     return primary;
+  }
+
+  const byServiceSlug = await getServiceSeoPageByServiceSlug(legacyServiceSlug);
+  if (byServiceSlug) {
+    return byServiceSlug;
   }
 
   return getServiceSeoPageBySlug(legacyServiceSlug);

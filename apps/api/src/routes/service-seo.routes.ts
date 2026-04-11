@@ -1,6 +1,7 @@
 import { Router } from "express";
 import {
   getServiceSeoByServiceIdAdmin,
+  getServiceSeoByServiceSlug,
   getServiceSeoBySlug,
   upsertServiceSeoByServiceIdAdmin
 } from "../controllers/service-seo.controller.js";
@@ -11,6 +12,7 @@ import { cmsUpload } from "../middlewares/upload.js";
 const router = Router();
 
 router.get("/by-slug/:slug", getServiceSeoBySlug);
+router.get("/by-service-slug/:slug", getServiceSeoByServiceSlug);
 router.get("/admin/service/:serviceId", requireAuth, requireRole("OWNER", "ADMIN"), getServiceSeoByServiceIdAdmin);
 router.put(
   "/admin/service/:serviceId",
