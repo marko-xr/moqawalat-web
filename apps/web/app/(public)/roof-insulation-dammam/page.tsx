@@ -25,6 +25,7 @@ type RoofPageModel = {
   serviceIntro: string;
   serviceItems: Array<{ title: string; description: string; imageAlt: string }>;
   serviceImage: string;
+  serviceImages: string[];
   areas: string[];
   relatedLinks: Array<{ title: string; href: string }>;
   ctaTopTitle: string;
@@ -82,6 +83,7 @@ const defaultModel: RoofPageModel = {
     }
   ],
   serviceImage: "/images/placeholder-after.svg",
+  serviceImages: [],
   areas: ["الدمام", "الخبر", "الظهران", "القطيف"],
   relatedLinks: [
     { title: "خدمات الدهانات الداخلية والخارجية", href: "/services/painting-services" },
@@ -270,6 +272,7 @@ function buildModel(source: Awaited<ReturnType<typeof getSeoSource>>): RoofPageM
     serviceIntro: toString((sections as { serviceIntro?: unknown }).serviceIntro) || defaultModel.serviceIntro,
     serviceItems: serviceItems.length ? serviceItems : defaultModel.serviceItems,
     serviceImage: afterImage || beforeImage || heroImage || defaultModel.serviceImage,
+    serviceImages: Array.isArray(source.images) ? source.images.filter(Boolean) : defaultModel.serviceImages,
     areas: areas.length ? areas : defaultModel.areas,
     relatedLinks: relatedLinks.length ? relatedLinks : defaultModel.relatedLinks,
     ctaTopTitle: toString((sections as { ctaTopTitle?: unknown }).ctaTopTitle) || defaultModel.ctaTopTitle,
@@ -291,7 +294,8 @@ function isExternalUrl(href: string) {
 export async function generateMetadata(): Promise<Metadata> {
   const model = buildModel(await getSeoSource());
   const siteUrl = getSiteUrl();
-  const ogImage = model.heroImage.startsWith("http") ? model.heroImage : `${siteUrl}${model.heroImage}`;
+  const rawOgImage = model.heroImage.startsWith("http") ? model.heroImage : `${siteUrl}${model.heroImage}`;
+  const ogImage = /\.(svg|webp)(\?|#|$)/i.test(rawOgImage) ? `${siteUrl}/images/logo-full.png` : rawOgImage;
 
   return {
     title: model.metaTitle,
@@ -400,6 +404,7 @@ export default async function RoofInsulationDammamPage() {
           intro={model.serviceIntro}
           items={model.serviceItems}
           imageSrc={model.serviceImage}
+          imageSources={model.serviceImages}
         />
 
         <section className="roof-areas card" aria-labelledby="roof-areas-heading">

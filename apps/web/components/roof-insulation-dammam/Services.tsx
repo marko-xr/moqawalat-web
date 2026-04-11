@@ -29,13 +29,15 @@ type ServicesProps = {
   intro?: string;
   items?: ServiceItem[];
   imageSrc?: string;
+  imageSources?: string[];
 };
 
 export default function Services({
   heading = "تفاصيل خدمة عزل الأسطح",
   intro = "نختار نوع العزل بعد فحص السطح وحالته الحالية، لضمان أفضل نتيجة حسب طبيعة المبنى والميزانية.",
   items = defaultServiceItems,
-  imageSrc = "/images/placeholder-after.svg"
+  imageSrc = "/images/placeholder-after.svg",
+  imageSources = []
 }: ServicesProps) {
   return (
     <section className="roof-services" aria-labelledby="roof-services-heading">
@@ -47,7 +49,7 @@ export default function Services({
           <article key={`${item.title}-${index}`} className="card roof-service-card">
             <div className="roof-service-image">
               <Image
-                src={imageSrc}
+                src={imageSources[index] || imageSrc}
                 alt={item.imageAlt}
                 width={1000}
                 height={700}

@@ -180,7 +180,9 @@ export async function getServiceBySlug(slug: string) {
 
 export async function getServiceSeoPageBySlug(slug: string) {
   try {
-    const page = await request<any>(`/service-seo/by-slug/${slug}`);
+    const page = await request<any>(`/service-seo/by-slug/${slug}`, {
+      next: { revalidate: 60 }
+    });
     return normalizeServiceSeoPage(page);
   } catch {
     return null;
