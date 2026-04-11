@@ -10,6 +10,20 @@ type FaqItem = {
   answer: string;
 };
 
+type ServiceSeoSourceService = {
+  id: string;
+  titleAr: string;
+  slug: string;
+  shortDescAr: string;
+  contentAr: string;
+  seoTitleAr: string | null;
+  seoDescriptionAr: string | null;
+  coverImage: string | null;
+  gallery: string[];
+  isPublished?: boolean;
+  updatedAt?: Date;
+};
+
 function toSlug(value: string) {
   return value
     .trim()
@@ -62,6 +76,69 @@ function normalizeFaq(items: unknown): FaqItem[] {
       return { question, answer };
     })
     .filter((item): item is FaqItem => Boolean(item));
+}
+
+function normalizeMediaList(items: unknown): string[] {
+  if (!Array.isArray(items)) {
+    return [];
+  }
+
+  return items
+    .map((item) => String(item || "").trim())
+    .filter(Boolean);
+}
+
+function mergeMediaLists(primary: unknown, secondary: unknown) {
+  const merged = new Set<string>();
+
+  normalizeMediaList(primary).forEach((item) => merged.add(item));
+  normalizeMediaList(secondary).forEach((item) => merged.add(item));
+
+  return Array.from(merged);
+}
+
+function enrichSeoPageWithService(
+  page: {
+    id?: string | null;
+    serviceId: string;
+    title: string;
+    slug: string;
+    metaTitle: string | null;
+    metaDescription: string | null;
+    contentSections: Prisma.JsonValue;
+    images: Prisma.JsonValue;
+    faq: Prisma.JsonValue;
+    updatedAt: Date;
+  },
+  service: ServiceSeoSourceService
+) {
+  const currentSections =
+    page.contentSections && typeof page.contentSections === "object"
+      ? ({ ...(page.contentSections as ContentSections) } as ContentSections)
+      : ({} as ContentSections);
+
+  const mergedImages = mergeMediaLists(page.images, service.gallery);
+  const heroImage = String((currentSections.heroImage as unknown) || "").trim();
+  const serviceLead = service.shortDescAr?.trim() || service.contentAr?.trim() || null;
+
+  currentSections.heroTitle = String((currentSections.heroTitle as unknown) || "").trim() || page.title || service.titleAr;
+
+  if (!String((currentSections.heroLead as unknown) || "").trim() && serviceLead) {
+    currentSections.heroLead = serviceLead;
+  }
+
+  if (!heroImage) {
+    currentSections.heroImage = service.coverImage || mergedImages[0] || null;
+  }
+
+  return {
+    ...page,
+    title: page.title || service.titleAr,
+    metaTitle: page.metaTitle || service.seoTitleAr || page.title || service.titleAr,
+    metaDescription: page.metaDescription || service.seoDescriptionAr || serviceLead,
+    contentSections: currentSections,
+    images: mergedImages
+  };
 }
 
 function defaultContentSections(service: {
@@ -149,8 +226,8 @@ function mapServiceSeo(service: {
     serviceId: service.id,
     title: service.titleAr,
     slug: service.slug,
-    metaTitle: service.seoTitleAr,
-    metaDescription: service.seoDescriptionAr,
+    metaTitle: service.seoTitleAr || service.titleAr,
+    metaDescription: service.seoDescriptionAr || service.shortDescAr,
     contentSections: defaultContentSections(service),
     images: service.gallery || [],
     faq: defaultFaq(service.titleAr),
@@ -209,7 +286,23 @@ export async function getServiceSeoBySlug(req: Request, res: Response) {
   });
 
   if (page && page.service.isPublished) {
-    return res.json(page);
+    return res.json(
+      enrichSeoPageWithService(
+        {
+          id: page.id,
+          serviceId: page.serviceId,
+          title: page.title,
+          slug: page.slug,
+          metaTitle: page.metaTitle,
+          metaDescription: page.metaDescription,
+          contentSections: page.contentSections,
+          images: page.images,
+          faq: page.faq,
+          updatedAt: page.updatedAt
+        },
+        page.service
+      )
+    );
   }
 
   const service = await prisma.service.findUnique({
@@ -262,9 +355,30 @@ export async function getServiceSeoByServiceIdAdmin(req: Request, res: Response)
 
   const page = await prisma.serviceSeoPage.findUnique({ where: { serviceId } });
 
+  if (page) {
+    return res.json({
+      service,
+      seoPage: enrichSeoPageWithService(
+        {
+          id: page.id,
+          serviceId: page.serviceId,
+          title: page.title,
+          slug: page.slug,
+          metaTitle: page.metaTitle,
+          metaDescription: page.metaDescription,
+          contentSections: page.contentSections,
+          images: page.images,
+          faq: page.faq,
+          updatedAt: page.updatedAt
+        },
+        service
+      )
+    });
+  }
+
   return res.json({
     service,
-    seoPage: page || mapServiceSeo(service)
+    seoPage: mapServiceSeo(service)
   });
 }
 
