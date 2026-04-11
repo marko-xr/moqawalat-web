@@ -1,4 +1,26 @@
 /** @type {import('next').NextConfig} */
+function buildApiUploadPattern(apiUrl) {
+  if (!apiUrl) {
+    return null;
+  }
+
+  try {
+    const parsed = new URL(apiUrl);
+    const protocol = parsed.protocol.replace(":", "");
+
+    return {
+      protocol,
+      hostname: parsed.hostname,
+      ...(parsed.port ? { port: parsed.port } : {}),
+      pathname: "/uploads/**"
+    };
+  } catch {
+    return null;
+  }
+}
+
+const apiUploadPattern = buildApiUploadPattern(process.env.NEXT_PUBLIC_API_URL || process.env.API_URL || "");
+
 const nextConfig = {
   images: {
     formats: ["image/avif", "image/webp"],
@@ -31,7 +53,8 @@ const nextConfig = {
         protocol: "https",
         hostname: "res.cloudinary.com",
         pathname: "/**"
-      }
+      },
+      ...(apiUploadPattern ? [apiUploadPattern] : [])
     ]
   },
   async headers() {

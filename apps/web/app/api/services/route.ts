@@ -72,6 +72,46 @@ function normalizeMediaUrl(value?: string | null) {
   return value;
 }
 
+function normalizeMediaList(value: unknown): string[] {
+  if (value === undefined || value === null) {
+    return [];
+  }
+
+  const flatten = (input: unknown): string[] => {
+    if (input === undefined || input === null) {
+      return [];
+    }
+
+    if (Array.isArray(input)) {
+      return input.flatMap((item) => flatten(item));
+    }
+
+    const trimmed = String(input).trim();
+    if (!trimmed) {
+      return [];
+    }
+
+    try {
+      const parsed = JSON.parse(trimmed);
+
+      if (Array.isArray(parsed)) {
+        return parsed.flatMap((item) => flatten(item));
+      }
+
+      if (typeof parsed === "string") {
+        const normalized = parsed.trim();
+        return normalized ? [normalized] : [];
+      }
+    } catch {
+      // Not JSON, keep value.
+    }
+
+    return [trimmed];
+  };
+
+  return Array.from(new Set(flatten(value).map((item) => normalizeMediaUrl(item) || item).filter(Boolean)));
+}
+
 function filterItems(items: Array<{ titleAr?: string; slug?: string; shortDescAr?: string; isPublished?: boolean }>, q: string, published: string) {
   const trimmed = q.trim().toLowerCase();
   const filtered = items.filter((item) => {
@@ -129,7 +169,7 @@ export async function GET(request: Request) {
     ...item,
     imageUrl: normalizeMediaUrl(item.imageUrl),
     coverImage: normalizeMediaUrl(item.coverImage),
-    gallery: Array.isArray(item.gallery) ? item.gallery.map((media) => normalizeMediaUrl(media) || media) : item.gallery,
+    gallery: normalizeMediaList(item.gallery),
     videoUrl: normalizeMediaUrl(item.videoUrl)
   }));
 

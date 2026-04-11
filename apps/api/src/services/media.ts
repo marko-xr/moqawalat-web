@@ -15,28 +15,54 @@ if (hasCloudinary) {
   });
 }
 
-function asStringArray(value: unknown): string[] {
+function flattenStringLike(value: unknown): string[] {
+  if (value === undefined || value === null) {
+    return [];
+  }
+
   if (Array.isArray(value)) {
-    return value.map((item) => String(item)).filter(Boolean);
+    return value.flatMap((item) => flattenStringLike(item));
   }
 
-  if (typeof value === "string") {
-    const trimmed = value.trim();
-    if (!trimmed) {
-      return [];
-    }
-
-    try {
-      const parsed = JSON.parse(trimmed);
-      if (Array.isArray(parsed)) {
-        return parsed.map((item) => String(item)).filter(Boolean);
-      }
-    } catch {
-      return trimmed.split(",").map((item) => item.trim()).filter(Boolean);
-    }
+  const trimmed = String(value).trim();
+  if (!trimmed) {
+    return [];
   }
 
-  return [];
+  try {
+    const parsed = JSON.parse(trimmed);
+
+    if (Array.isArray(parsed)) {
+      return parsed.flatMap((item) => flattenStringLike(item));
+    }
+
+    if (typeof parsed === "string") {
+      const normalized = parsed.trim();
+      return normalized ? [normalized] : [];
+    }
+  } catch {
+    // Not JSON, continue with plain-text parsing.
+  }
+
+  const shouldSplitByComma =
+    trimmed.includes(",") &&
+    !trimmed.startsWith("http://") &&
+    !trimmed.startsWith("https://") &&
+    !trimmed.startsWith("/uploads/") &&
+    !trimmed.startsWith("uploads/");
+
+  if (shouldSplitByComma) {
+    return trimmed
+      .split(",")
+      .map((item) => item.trim())
+      .filter(Boolean);
+  }
+
+  return [trimmed];
+}
+
+function asStringArray(value: unknown): string[] {
+  return flattenStringLike(value);
 }
 
 function toBoolean(value: unknown): boolean | undefined {

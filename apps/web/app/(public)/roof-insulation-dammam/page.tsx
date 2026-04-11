@@ -277,7 +277,15 @@ function buildModel(source: Awaited<ReturnType<typeof getSeoSource>>): RoofPageM
     serviceIntro: toString((sections as { serviceIntro?: unknown }).serviceIntro) || defaultModel.serviceIntro,
     serviceItems: serviceItems.length ? serviceItems : defaultModel.serviceItems,
     serviceImage: afterImage || beforeImage || heroImage || defaultModel.serviceImage,
-    serviceImages: Array.isArray(source.images) ? source.images.filter(Boolean) : defaultModel.serviceImages,
+    serviceImages: Array.from(
+      new Set(
+        [
+          ...(Array.isArray(source.images) ? source.images.filter(Boolean) : defaultModel.serviceImages),
+          beforeImage,
+          afterImage
+        ].filter(Boolean)
+      )
+    ),
     areas: areas.length ? areas : defaultModel.areas,
     relatedLinks: relatedLinks.length ? relatedLinks : defaultModel.relatedLinks,
     ctaTopTitle: toString((sections as { ctaTopTitle?: unknown }).ctaTopTitle) || defaultModel.ctaTopTitle,

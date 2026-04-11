@@ -78,12 +78,52 @@ function normalizeMediaUrl(value?: string | null) {
   return value;
 }
 
+function normalizeMediaList(value: unknown): string[] {
+  if (value === undefined || value === null) {
+    return [];
+  }
+
+  const flatten = (input: unknown): string[] => {
+    if (input === undefined || input === null) {
+      return [];
+    }
+
+    if (Array.isArray(input)) {
+      return input.flatMap((item) => flatten(item));
+    }
+
+    const trimmed = String(input).trim();
+    if (!trimmed) {
+      return [];
+    }
+
+    try {
+      const parsed = JSON.parse(trimmed);
+
+      if (Array.isArray(parsed)) {
+        return parsed.flatMap((item) => flatten(item));
+      }
+
+      if (typeof parsed === "string") {
+        const normalized = parsed.trim();
+        return normalized ? [normalized] : [];
+      }
+    } catch {
+      // Not JSON, keep the raw string value.
+    }
+
+    return [trimmed];
+  };
+
+  return Array.from(new Set(flatten(value).map((item) => normalizeMediaUrl(item) || item).filter(Boolean)));
+}
+
 function normalizeService(service: any) {
   return {
     ...service,
     imageUrl: normalizeMediaUrl(service?.imageUrl),
     coverImage: normalizeMediaUrl(service?.coverImage),
-    gallery: Array.isArray(service?.gallery) ? service.gallery.map((item: string) => normalizeMediaUrl(item)) : service?.gallery
+    gallery: normalizeMediaList(service?.gallery)
   };
 }
 
@@ -93,7 +133,7 @@ function normalizeProject(project: any) {
     beforeImage: normalizeMediaUrl(project?.beforeImage),
     afterImage: normalizeMediaUrl(project?.afterImage),
     coverImage: normalizeMediaUrl(project?.coverImage),
-    gallery: Array.isArray(project?.gallery) ? project.gallery.map((item: string) => normalizeMediaUrl(item)) : project?.gallery
+    gallery: normalizeMediaList(project?.gallery)
   };
 }
 
@@ -109,7 +149,7 @@ function normalizeServiceSeoPage(page: any): ServiceSeoPage {
 
   return {
     ...page,
-    images: Array.isArray(page?.images) ? page.images.map((item: string) => normalizeMediaUrl(item) || item) : [],
+    images: normalizeMediaList(page?.images),
     contentSections: {
       ...contentSections,
       heroImage: normalizeMediaUrl(contentSections?.heroImage),
@@ -183,7 +223,16 @@ export async function getServiceSeoPageBySlug(slug: string) {
     const page = await request<any>(`/service-seo/by-slug/${slug}`, {
       next: { revalidate: 60 }
     });
-    return normalizeServiceSeoPage(page);
+    const normalized = normalizeServiceSeoPage(page);
+
+    if (process.env.NODE_ENV !== "production") {
+      console.log("[service-seo] by-slug", slug, {
+        imagesCount: normalized.images?.length || 0,
+        heroImage: normalized.contentSections?.heroImage || null
+      });
+    }
+
+    return normalized;
   } catch {
     return null;
   }
@@ -194,7 +243,16 @@ export async function getServiceSeoPageByServiceSlug(slug: string) {
     const page = await request<any>(`/service-seo/by-service-slug/${slug}`, {
       next: { revalidate: 60 }
     });
-    return normalizeServiceSeoPage(page);
+    const normalized = normalizeServiceSeoPage(page);
+
+    if (process.env.NODE_ENV !== "production") {
+      console.log("[service-seo] by-service-slug", slug, {
+        imagesCount: normalized.images?.length || 0,
+        heroImage: normalized.contentSections?.heroImage || null
+      });
+    }
+
+    return normalized;
   } catch {
     return null;
   }

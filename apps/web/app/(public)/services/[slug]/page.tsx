@@ -6,6 +6,46 @@ import { getSiteUrl } from "@/lib/site-url";
 
 export const revalidate = 300;
 
+function normalizeImageList(value: unknown): string[] {
+  if (value === undefined || value === null) {
+    return [];
+  }
+
+  const flatten = (input: unknown): string[] => {
+    if (input === undefined || input === null) {
+      return [];
+    }
+
+    if (Array.isArray(input)) {
+      return input.flatMap((item) => flatten(item));
+    }
+
+    const trimmed = String(input).trim();
+    if (!trimmed) {
+      return [];
+    }
+
+    try {
+      const parsed = JSON.parse(trimmed);
+
+      if (Array.isArray(parsed)) {
+        return parsed.flatMap((item) => flatten(item));
+      }
+
+      if (typeof parsed === "string") {
+        const normalized = parsed.trim();
+        return normalized ? [normalized] : [];
+      }
+    } catch {
+      // Not JSON, keep raw token.
+    }
+
+    return [trimmed];
+  };
+
+  return Array.from(new Set(flatten(value).filter(Boolean)));
+}
+
 export async function generateStaticParams() {
   const services = await getServices();
   return services.map((service) => ({ slug: service.slug }));
@@ -38,7 +78,7 @@ export default async function ServiceDetails({ params }: { params: Promise<{ slu
   }
 
   const cover = service.coverImage || service.imageUrl || "/images/placeholder-before.svg";
-  const gallery: string[] = Array.isArray(service.gallery) ? service.gallery : [];
+  const gallery: string[] = normalizeImageList(service.gallery);
   const galleryDescriptions: string[] = Array.isArray(service.galleryDescriptions) ? service.galleryDescriptions : [];
   const videoUrl = service.videoUrl || "";
 

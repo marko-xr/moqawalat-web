@@ -52,6 +52,46 @@ function toSlug(value: string) {
     .replace(/^-+|-+$/g, "");
 }
 
+function normalizeMediaList(value: unknown): string[] {
+  if (value === undefined || value === null) {
+    return [];
+  }
+
+  const flatten = (input: unknown): string[] => {
+    if (input === undefined || input === null) {
+      return [];
+    }
+
+    if (Array.isArray(input)) {
+      return input.flatMap((item) => flatten(item));
+    }
+
+    const trimmed = String(input).trim();
+    if (!trimmed) {
+      return [];
+    }
+
+    try {
+      const parsed = JSON.parse(trimmed);
+
+      if (Array.isArray(parsed)) {
+        return parsed.flatMap((item) => flatten(item));
+      }
+
+      if (typeof parsed === "string") {
+        const normalized = parsed.trim();
+        return normalized ? [normalized] : [];
+      }
+    } catch {
+      // Not JSON, keep the value as-is.
+    }
+
+    return [trimmed];
+  };
+
+  return Array.from(new Set(flatten(value).filter(Boolean)));
+}
+
 function formatDate(value?: string) {
   if (!value) {
     return "";
@@ -362,6 +402,11 @@ export default function AdminServicesPage() {
   }
 
   function handleEdit(item: Service) {
+    const normalizedGallery = normalizeMediaList(item.gallery);
+    const existingDescriptions = Array.isArray(item.galleryDescriptions)
+      ? item.galleryDescriptions.map((entry) => String(entry || ""))
+      : [];
+
     setForm({
       id: item.id,
       titleAr: item.titleAr || "",
@@ -374,10 +419,11 @@ export default function AdminServicesPage() {
       videoUrl: item.videoUrl || "",
       isPublished: item.isPublished ?? true,
       coverImage: item.coverImage || item.imageUrl || "",
-      gallery: item.gallery ? [...item.gallery] : [],
-      galleryDescriptions: item.galleryDescriptions
-        ? [...item.galleryDescriptions, ...Array(Math.max((item.gallery?.length || 0) - item.galleryDescriptions.length, 0)).fill("")]
-        : Array(item.gallery?.length || 0).fill("")
+      gallery: normalizedGallery,
+      galleryDescriptions: [
+        ...existingDescriptions.slice(0, normalizedGallery.length),
+        ...Array(Math.max(normalizedGallery.length - existingDescriptions.length, 0)).fill("")
+      ]
     });
     setCoverFile(null);
     setGalleryFiles([]);
@@ -424,8 +470,8 @@ export default function AdminServicesPage() {
     setIsCompressingImages(true);
     try {
       const compressed = await compressImageFiles(files);
-      setGalleryFiles(compressed);
-      setNewGalleryDescriptions((current) => compressed.map((_, index) => current[index] || ""));
+      setGalleryFiles((current) => [...current, ...compressed]);
+      setNewGalleryDescriptions((current) => [...current, ...compressed.map(() => "")]);
     } finally {
       setIsCompressingImages(false);
     }

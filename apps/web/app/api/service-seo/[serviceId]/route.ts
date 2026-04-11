@@ -54,6 +54,46 @@ function normalizeMediaUrl(value?: string | null) {
   return value;
 }
 
+function normalizeMediaList(value: unknown): string[] {
+  if (value === undefined || value === null) {
+    return [];
+  }
+
+  const flatten = (input: unknown): string[] => {
+    if (input === undefined || input === null) {
+      return [];
+    }
+
+    if (Array.isArray(input)) {
+      return input.flatMap((item) => flatten(item));
+    }
+
+    const trimmed = String(input).trim();
+    if (!trimmed) {
+      return [];
+    }
+
+    try {
+      const parsed = JSON.parse(trimmed);
+
+      if (Array.isArray(parsed)) {
+        return parsed.flatMap((item) => flatten(item));
+      }
+
+      if (typeof parsed === "string") {
+        const normalized = parsed.trim();
+        return normalized ? [normalized] : [];
+      }
+    } catch {
+      // Not JSON, keep raw value.
+    }
+
+    return [trimmed];
+  };
+
+  return Array.from(new Set(flatten(value).map((item) => normalizeMediaUrl(item) || item).filter(Boolean)));
+}
+
 function normalizeSeoPayload(payload: any) {
   const contentSections = payload?.seoPage?.contentSections && typeof payload.seoPage.contentSections === "object"
     ? payload.seoPage.contentSections
@@ -65,15 +105,11 @@ function normalizeSeoPayload(payload: any) {
       ...payload?.service,
       imageUrl: normalizeMediaUrl(payload?.service?.imageUrl),
       coverImage: normalizeMediaUrl(payload?.service?.coverImage),
-      gallery: Array.isArray(payload?.service?.gallery)
-        ? payload.service.gallery.map((item: string) => normalizeMediaUrl(item) || item)
-        : payload?.service?.gallery
+      gallery: normalizeMediaList(payload?.service?.gallery)
     },
     seoPage: {
       ...payload?.seoPage,
-      images: Array.isArray(payload?.seoPage?.images)
-        ? payload.seoPage.images.map((item: string) => normalizeMediaUrl(item) || item)
-        : [],
+      images: normalizeMediaList(payload?.seoPage?.images),
       contentSections: {
         ...contentSections,
         heroImage: normalizeMediaUrl(contentSections?.heroImage),

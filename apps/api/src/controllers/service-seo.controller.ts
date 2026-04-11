@@ -88,6 +88,10 @@ function normalizeMediaList(items: unknown): string[] {
     .filter(Boolean);
 }
 
+function isPlaceholderImage(value: string) {
+  return value.includes("/images/placeholder-before.svg") || value.includes("/images/placeholder-after.svg");
+}
+
 function mergeMediaLists(primary: unknown, secondary: unknown) {
   const merged = new Set<string>();
 
@@ -127,7 +131,7 @@ function enrichSeoPageWithService(
     currentSections.heroLead = serviceLead;
   }
 
-  if (!heroImage) {
+  if (!heroImage || isPlaceholderImage(heroImage)) {
     currentSections.heroImage = service.coverImage || mergedImages[0] || null;
   }
 
@@ -514,7 +518,13 @@ export async function upsertServiceSeoByServiceIdAdmin(req: Request, res: Respon
       nextSections.afterImage = uploadedAfterImage;
     }
 
-    const nextImages = [...existingImages, ...uploadedGalleryImages];
+    const nextImages = Array.from(
+      new Set(
+        [...existingImages, ...uploadedGalleryImages]
+          .map((item) => String(item || "").trim())
+          .filter(Boolean)
+      )
+    );
 
     const [updatedService, seoPage] = await prisma.$transaction([
       prisma.service.update({

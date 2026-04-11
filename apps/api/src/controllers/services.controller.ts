@@ -361,7 +361,9 @@ export async function createService(req: Request, res: Response) {
     const uploadedGallery = await uploadMediaFiles(galleryFiles, "moqawalat/services");
     const uploadedVideo = await uploadMediaFile(videoFile, "moqawalat/services");
 
-    const gallery = [...parseGallery(req.body.gallery), ...uploadedGallery];
+    const gallery = [...parseGallery(req.body.gallery), ...uploadedGallery]
+      .map((item) => String(item || "").trim())
+      .filter(Boolean);
     const existingDescriptions = normalizeDescriptions(parseGallery(req.body.galleryDescriptions), parseGallery(req.body.gallery).length);
     const newDescriptions = normalizeDescriptions(parseGallery(req.body.newGalleryDescriptions), uploadedGallery.length);
     const galleryDescriptions = [...existingDescriptions, ...newDescriptions];
@@ -449,7 +451,9 @@ export async function updateService(req: Request, res: Response) {
     const uploadedVideo = await uploadMediaFile(videoFile, "moqawalat/services");
 
     const existingGallery = parseGallery(req.body.gallery);
-    const gallery = [...existingGallery, ...uploadedGallery];
+    const gallery = [...existingGallery, ...uploadedGallery]
+      .map((item) => String(item || "").trim())
+      .filter(Boolean);
     const existingDescriptions = normalizeDescriptions(parseGallery(req.body.galleryDescriptions), existingGallery.length);
     const newDescriptions = normalizeDescriptions(parseGallery(req.body.newGalleryDescriptions), uploadedGallery.length);
     const galleryDescriptions = [...existingDescriptions, ...newDescriptions];

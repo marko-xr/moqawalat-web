@@ -1,4 +1,5 @@
 import Image from "next/image";
+import ServiceGallery from "./ServiceGallery";
 
 type ServiceItem = {
   title: string;
@@ -39,6 +40,15 @@ export default function Services({
   imageSrc = "/images/placeholder-after.svg",
   imageSources = []
 }: ServicesProps) {
+  const normalizedSources = Array.from(
+    new Set(
+      imageSources
+        .map((item) => String(item || "").trim())
+        .filter(Boolean)
+    )
+  );
+  const fallbackImage = String(imageSrc || "").trim() || "/images/placeholder-after.svg";
+
   return (
     <section className="roof-services" aria-labelledby="roof-services-heading">
       <h2 id="roof-services-heading">{heading}</h2>
@@ -49,7 +59,7 @@ export default function Services({
           <article key={`${item.title}-${index}`} className="card roof-service-card">
             <div className="roof-service-image">
               <Image
-                src={imageSources[index] || imageSrc}
+                src={normalizedSources[index] || normalizedSources[index % Math.max(normalizedSources.length, 1)] || fallbackImage}
                 alt={item.imageAlt}
                 width={1000}
                 height={700}
@@ -62,6 +72,8 @@ export default function Services({
           </article>
         ))}
       </div>
+
+      <ServiceGallery images={normalizedSources} fallbackImage={fallbackImage} altPrefix={heading} />
     </section>
   );
 }
