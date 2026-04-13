@@ -1,10 +1,12 @@
-import "dotenv/config";
 import bcrypt from "bcryptjs";
-import { PrismaClient } from "@prisma/client";
+import { initializeDatabaseRuntime } from "../apps/api/src/services/db-runtime.js";
+import { disconnectPrisma, ensurePrismaConnection, prisma } from "../apps/api/src/services/prisma.js";
 
-const prisma = new PrismaClient();
+initializeDatabaseRuntime({ runtime: "script", source: "prisma/seed.ts" });
 
 async function main() {
+  await ensurePrismaConnection();
+
   const ownerPassword = await bcrypt.hash("Admin@12345", 12);
 
   await prisma.user.upsert({
@@ -87,10 +89,10 @@ async function main() {
 
 main()
   .then(async () => {
-    await prisma.$disconnect();
+    await disconnectPrisma();
   })
   .catch(async (error) => {
     console.error(error);
-    await prisma.$disconnect();
+    await disconnectPrisma();
     process.exit(1);
   });

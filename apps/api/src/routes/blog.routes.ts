@@ -9,7 +9,7 @@ import {
 } from "../controllers/blog.controller.js";
 import { requireAuth } from "../middlewares/auth.js";
 import { requireRole } from "../middlewares/role.js";
-import { cmsUpload } from "../middlewares/upload.js";
+import { cmsUpload, ensureNonEmptyUploads } from "../middlewares/upload.js";
 import { validateRequest } from "../middlewares/validation.js";
 
 const router = Router();
@@ -21,6 +21,7 @@ router.post(
   requireAuth,
   requireRole("OWNER", "ADMIN"),
   cmsUpload.fields([{ name: "coverImage", maxCount: 1 }]),
+  ensureNonEmptyUploads,
   blogValidation,
   validateRequest,
   createBlogPost
@@ -30,6 +31,7 @@ router.put(
   requireAuth,
   requireRole("OWNER", "ADMIN"),
   cmsUpload.fields([{ name: "coverImage", maxCount: 1 }]),
+  ensureNonEmptyUploads,
   blogValidation,
   validateRequest,
   updateBlogPost

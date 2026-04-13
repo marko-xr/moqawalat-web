@@ -1,0 +1,9 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1600" height="1066" viewBox="0 0 1600 1066" fill="none">
+  <rect width="1600" height="1066" fill="#F7F6EF"/>
+  <rect x="120" y="120" width="1360" height="826" rx="36" fill="#E8E0C9"/>
+  <rect x="220" y="220" width="1160" height="260" rx="24" fill="#D3C39A"/>
+  <rect x="220" y="530" width="360" height="300" rx="20" fill="#C7B381"/>
+  <rect x="620" y="530" width="360" height="300" rx="20" fill="#BDA86E"/>
+  <rect x="1020" y="530" width="360" height="300" rx="20" fill="#B29D5B"/>
+  <text x="220" y="920" fill="#5C4A1F" font-size="56" font-family="Tahoma, sans-serif">Service Default Image 02</text>
+</svg>

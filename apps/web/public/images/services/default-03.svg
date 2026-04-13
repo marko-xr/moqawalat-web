@@ -1,0 +1,9 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1600" height="1066" viewBox="0 0 1600 1066" fill="none">
+  <rect width="1600" height="1066" fill="#F2F6F2"/>
+  <rect x="120" y="120" width="1360" height="826" rx="36" fill="#D5E5D4"/>
+  <circle cx="420" cy="430" r="180" fill="#9BC098"/>
+  <circle cx="760" cy="430" r="180" fill="#7CAB78"/>
+  <circle cx="1100" cy="430" r="180" fill="#5E9757"/>
+  <rect x="220" y="690" width="1160" height="120" rx="18" fill="#B4CFB1"/>
+  <text x="220" y="905" fill="#2F5A2E" font-size="56" font-family="Tahoma, sans-serif">Service Default Image 03</text>
+</svg>

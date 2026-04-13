@@ -2,6 +2,7 @@ import type { Request, Response } from "express";
 import { Prisma } from "@prisma/client";
 import { prisma } from "../services/prisma.js";
 import { parseBoolean, parseGallery, uploadMediaFile, uploadMediaFiles } from "../services/media.js";
+import { resolveServiceMedia } from "../services/service-media-fallback.js";
 
 type ContentSections = Prisma.JsonObject;
 
@@ -130,30 +131,33 @@ function enrichSeoPageWithService(
   },
   service: ServiceSeoSourceService
 ) {
+  const resolvedService = resolveServiceMedia(service);
+
   const currentSections =
     page.contentSections && typeof page.contentSections === "object"
       ? ({ ...(page.contentSections as ContentSections) } as ContentSections)
       : ({} as ContentSections);
 
-  const mergedImages = mergeMediaLists(page.images, service.gallery);
+  const mergedImages = mergeMediaLists(page.images, resolvedService.gallery);
   const heroImage = String((currentSections.heroImage as unknown) || "").trim();
-  const serviceLead = service.shortDescAr?.trim() || service.contentAr?.trim() || null;
+  const serviceLead = resolvedService.shortDescAr?.trim() || resolvedService.contentAr?.trim() || null;
 
-  currentSections.heroTitle = String((currentSections.heroTitle as unknown) || "").trim() || page.title || service.titleAr;
+  currentSections.heroTitle =
+    String((currentSections.heroTitle as unknown) || "").trim() || page.title || resolvedService.titleAr;
 
   if (!String((currentSections.heroLead as unknown) || "").trim() && serviceLead) {
     currentSections.heroLead = serviceLead;
   }
 
   if (!heroImage || isPlaceholderImage(heroImage)) {
-    currentSections.heroImage = service.coverImage || mergedImages[0] || null;
+    currentSections.heroImage = resolvedService.coverImage || mergedImages[0] || null;
   }
 
   return {
     ...page,
-    title: page.title || service.titleAr,
-    metaTitle: page.metaTitle || service.seoTitleAr || page.title || service.titleAr,
-    metaDescription: page.metaDescription || service.seoDescriptionAr || serviceLead,
+    title: page.title || resolvedService.titleAr,
+    metaTitle: page.metaTitle || resolvedService.seoTitleAr || page.title || resolvedService.titleAr,
+    metaDescription: page.metaDescription || resolvedService.seoDescriptionAr || serviceLead,
     contentSections: currentSections,
     images: mergedImages
   };
@@ -239,17 +243,19 @@ function mapServiceSeo(service: {
   gallery: string[];
   updatedAt: Date;
 }) {
+  const resolvedService = resolveServiceMedia(service);
+
   return {
     id: null,
-    serviceId: service.id,
-    title: service.titleAr,
-    slug: service.slug,
-    metaTitle: service.seoTitleAr || service.titleAr,
-    metaDescription: service.seoDescriptionAr || service.shortDescAr,
-    contentSections: defaultContentSections(service),
-    images: normalizeMediaList(service.gallery),
-    faq: defaultFaq(service.titleAr),
-    updatedAt: service.updatedAt
+    serviceId: resolvedService.id,
+    title: resolvedService.titleAr,
+    slug: resolvedService.slug,
+    metaTitle: resolvedService.seoTitleAr || resolvedService.titleAr,
+    metaDescription: resolvedService.seoDescriptionAr || resolvedService.shortDescAr,
+    contentSections: defaultContentSections(resolvedService),
+    images: normalizeMediaList(resolvedService.gallery),
+    faq: defaultFaq(resolvedService.titleAr),
+    updatedAt: resolvedService.updatedAt
   };
 }
 

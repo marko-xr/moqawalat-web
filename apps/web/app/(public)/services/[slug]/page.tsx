@@ -4,6 +4,7 @@ import { notFound } from "next/navigation";
 import Image from "next/image";
 import { getSiteUrl } from "@/lib/site-url";
 import { pickFirstImage, sanitizeImageList } from "@/lib/media";
+import { resolveServiceMedia } from "@/lib/service-media-fallback";
 import ServiceImageDebugPanel from "@/components/dev/ServiceImageDebugPanel";
 
 export const revalidate = 300;
@@ -39,10 +40,9 @@ export default async function ServiceDetails({ params }: { params: Promise<{ slu
     notFound();
   }
 
-  const gallery: string[] = sanitizeImageList(service.gallery, { allowPlaceholders: false });
-  const cover =
-    pickFirstImage([service.coverImage, service.imageUrl], { allowPlaceholders: false }) ||
-    "/images/placeholder-before.svg";
+  const media = resolveServiceMedia(service);
+  const gallery: string[] = sanitizeImageList(media.gallery, { allowPlaceholders: false });
+  const cover = pickFirstImage([media.coverImage, media.imageUrl], { allowPlaceholders: false }) || media.gallery[0];
   const galleryDescriptions: string[] = Array.isArray(service.galleryDescriptions) ? service.galleryDescriptions : [];
   const videoUrl = service.videoUrl || "";
 
@@ -173,8 +173,8 @@ export default async function ServiceDetails({ params }: { params: Promise<{ slu
         {process.env.NODE_ENV !== "production" ? (
           <ServiceImageDebugPanel
             pageSlug={service.slug}
-            coverImage={service.coverImage || service.imageUrl || null}
-            gallery={service.gallery}
+            coverImage={media.coverImage || media.imageUrl || null}
+            gallery={media.gallery}
             sourceLabel="services/[slug]"
           />
         ) : null}

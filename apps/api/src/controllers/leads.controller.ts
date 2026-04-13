@@ -2,6 +2,7 @@ import type { Request, Response } from "express";
 import { body } from "express-validator";
 import { Prisma } from "@prisma/client";
 import { prisma } from "../services/prisma.js";
+import { uploadMediaFile } from "../services/media.js";
 
 export const createLeadValidation = [
   body("fullName").isLength({ min: 3 }),
@@ -27,6 +28,8 @@ export async function createLead(req: Request, res: Response) {
     }
   }
 
+  const uploadedImage = await uploadMediaFile(req.file, "moqawalat/leads");
+
   const lead = await prisma.lead.create({
     data: {
       fullName: req.body.fullName,
@@ -36,7 +39,7 @@ export async function createLead(req: Request, res: Response) {
       serviceType: req.body.serviceType,
       message: req.body.message,
       locationUrl: typeof req.body.locationUrl === "string" ? req.body.locationUrl.trim() || undefined : undefined,
-      imageUrl: req.file ? `/uploads/${req.file.filename}` : undefined,
+      imageUrl: uploadedImage,
       source: req.body.source || "website",
       pageUrl: req.body.pageUrl,
       userAgent: req.headers["user-agent"]

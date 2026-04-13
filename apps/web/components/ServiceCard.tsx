@@ -1,9 +1,11 @@
 import Link from "next/link";
 import Image from "next/image";
 import type { Service } from "@/lib/types";
+import { resolveServiceMedia } from "@/lib/service-media-fallback";
 
 export default function ServiceCard({ service }: { service: Service }) {
-  const cover = service.coverImage || service.imageUrl || "/images/placeholder-before.svg";
+  const media = resolveServiceMedia(service);
+  const cover = media.coverImage;
 
   return (
     <article className="card service-card">

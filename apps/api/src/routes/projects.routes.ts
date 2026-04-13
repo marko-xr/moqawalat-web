@@ -11,7 +11,7 @@ import {
 } from "../controllers/projects.controller.js";
 import { requireAuth } from "../middlewares/auth.js";
 import { requireRole } from "../middlewares/role.js";
-import { cmsUpload } from "../middlewares/upload.js";
+import { cmsUpload, ensureNonEmptyUploads } from "../middlewares/upload.js";
 import { validateRequest } from "../middlewares/validation.js";
 
 const router = Router();
@@ -30,6 +30,7 @@ router.post(
     { name: "beforeImage", maxCount: 1 },
     { name: "afterImage", maxCount: 1 }
   ]),
+  ensureNonEmptyUploads,
   projectCreateValidation,
   validateRequest,
   createProject
@@ -45,6 +46,7 @@ router.put(
     { name: "beforeImage", maxCount: 1 },
     { name: "afterImage", maxCount: 1 }
   ]),
+  ensureNonEmptyUploads,
   projectUpdateValidation,
   validateRequest,
   updateProject

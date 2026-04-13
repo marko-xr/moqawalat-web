@@ -1,5 +1,6 @@
 import type { ServiceSeoPage } from "@/lib/types";
 import { isValidImageUrl, pickFirstImage, sanitizeImageList } from "@/lib/media";
+import { resolveServiceMedia as resolveServiceMediaFallback } from "@/lib/service-media-fallback";
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:4000/api";
 const REQUEST_TIMEOUT_MS = 8000;
@@ -88,12 +89,14 @@ function normalizeMediaList(value: unknown): string[] {
 }
 
 function normalizeService(service: any) {
-  return {
+  const normalized = {
     ...service,
     imageUrl: normalizeMediaUrl(service?.imageUrl),
     coverImage: normalizeMediaUrl(service?.coverImage),
     gallery: normalizeMediaList(service?.gallery)
   };
+
+  return resolveServiceMediaFallback(normalized);
 }
 
 function normalizeProject(project: any) {

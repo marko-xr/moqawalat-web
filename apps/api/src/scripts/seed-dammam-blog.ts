@@ -1,5 +1,7 @@
-import "dotenv/config";
-import { prisma } from "../services/prisma.js";
+import { initializeDatabaseRuntime } from "../services/db-runtime.js";
+import { disconnectPrisma, ensurePrismaConnection, prisma } from "../services/prisma.js";
+
+initializeDatabaseRuntime({ runtime: "script", source: "apps/api/src/scripts/seed-dammam-blog.ts" });
 
 type BlogSeedItem = {
   titleAr: string;
@@ -135,6 +137,8 @@ const posts: BlogSeedItem[] = [
 ];
 
 async function seedBlogPosts() {
+  await ensurePrismaConnection();
+
   for (const post of posts) {
     await prisma.blogPost.upsert({
       where: { slug: post.slug },
@@ -220,10 +224,10 @@ seedBlogPosts()
     await assignRealProjectCovers();
     const count = await prisma.blogPost.count();
     console.log(`Seed complete. Blog posts in database: ${count}`);
-    await prisma.$disconnect();
+    await disconnectPrisma();
   })
   .catch(async (error) => {
     console.error("Seed failed:", error);
-    await prisma.$disconnect();
+    await disconnectPrisma();
     process.exit(1);
   });

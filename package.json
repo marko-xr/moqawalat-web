@@ -11,7 +11,9 @@
     "start": "concurrently \"npm run start --workspace @moqawalat/api\" \"npm run start --workspace @moqawalat/web\"",
     "prisma:generate": "prisma generate",
     "prisma:migrate": "prisma migrate dev",
-    "prisma:seed": "tsx prisma/seed.ts"
+    "prisma:seed": "tsx prisma/seed.ts",
+    "cleanup:images": "tsx scripts/cleanupBrokenImages.ts",
+    "repair:service-images": "tsx scripts/repairServiceImages.ts"
   },
   "prisma": {
     "seed": "tsx prisma/seed.ts"

@@ -7,7 +7,7 @@ import {
 } from "../controllers/service-seo.controller.js";
 import { requireAuth } from "../middlewares/auth.js";
 import { requireRole } from "../middlewares/role.js";
-import { cmsUpload } from "../middlewares/upload.js";
+import { cmsUpload, ensureNonEmptyUploads } from "../middlewares/upload.js";
 
 const router = Router();
 
@@ -24,6 +24,7 @@ router.put(
     { name: "afterImage", maxCount: 1 },
     { name: "images", maxCount: 20 }
   ]),
+  ensureNonEmptyUploads,
   upsertServiceSeoByServiceIdAdmin
 );
 

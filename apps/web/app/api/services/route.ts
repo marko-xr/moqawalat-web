@@ -1,6 +1,7 @@
 import { cookies } from "next/headers";
 import { NextResponse } from "next/server";
 import { isValidImageUrl, sanitizeImageList } from "@/lib/media";
+import { resolveServiceMedia as resolveServiceMediaFallback } from "@/lib/service-media-fallback";
 
 const API_URL = process.env.API_URL || process.env.NEXT_PUBLIC_API_URL || "http://localhost:4000/api";
 const API_ORIGIN = API_URL.replace(/\/api\/?$/, "");
@@ -134,13 +135,15 @@ export async function GET(request: Request) {
     videoUrl?: string | null;
   }>;
 
-  const normalized = items.map((item) => ({
-    ...item,
-    imageUrl: normalizeMediaUrl(item.imageUrl),
-    coverImage: normalizeMediaUrl(item.coverImage),
-    gallery: normalizeMediaList(item.gallery),
-    videoUrl: normalizeMediaUrl(item.videoUrl)
-  }));
+  const normalized = items.map((item) =>
+    resolveServiceMediaFallback({
+      ...item,
+      imageUrl: normalizeMediaUrl(item.imageUrl),
+      coverImage: normalizeMediaUrl(item.coverImage),
+      gallery: normalizeMediaList(item.gallery),
+      videoUrl: normalizeMediaUrl(item.videoUrl)
+    })
+  );
 
   const filtered = filterItems(normalized, q, published);
   const total = filtered.length;

@@ -11,7 +11,7 @@ import {
 } from "../controllers/services.controller.js";
 import { requireAuth } from "../middlewares/auth.js";
 import { requireRole } from "../middlewares/role.js";
-import { cmsUpload } from "../middlewares/upload.js";
+import { cmsUpload, ensureNonEmptyUploads } from "../middlewares/upload.js";
 import { validateRequest } from "../middlewares/validation.js";
 
 const router = Router();
@@ -28,6 +28,7 @@ router.post(
     { name: "gallery", maxCount: 12 },
     { name: "video", maxCount: 1 }
   ]),
+  ensureNonEmptyUploads,
   serviceCreateValidation,
   validateRequest,
   createService
@@ -41,6 +42,7 @@ router.put(
     { name: "gallery", maxCount: 12 },
     { name: "video", maxCount: 1 }
   ]),
+  ensureNonEmptyUploads,
   serviceUpdateValidation,
   validateRequest,
   updateService

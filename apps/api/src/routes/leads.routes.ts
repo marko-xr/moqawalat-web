@@ -9,12 +9,12 @@ import {
 } from "../controllers/leads.controller.js";
 import { requireAuth } from "../middlewares/auth.js";
 import { requireRole } from "../middlewares/role.js";
-import { upload } from "../middlewares/upload.js";
+import { ensureNonEmptyUploads, upload } from "../middlewares/upload.js";
 import { validateRequest } from "../middlewares/validation.js";
 
 const router = Router();
 
-router.post("/", upload.single("image"), createLeadValidation, validateRequest, createLead);
+router.post("/", upload.single("image"), ensureNonEmptyUploads, createLeadValidation, validateRequest, createLead);
 router.get("/", requireAuth, requireRole("OWNER", "ADMIN"), getLeads);
 router.patch(
   "/:id",

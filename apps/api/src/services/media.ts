@@ -1,19 +1,4 @@
-import { v2 as cloudinary } from "cloudinary";
-import fs from "node:fs/promises";
-import path from "node:path";
-
-const hasCloudinary =
-  Boolean(process.env.CLOUDINARY_CLOUD_NAME) &&
-  Boolean(process.env.CLOUDINARY_API_KEY) &&
-  Boolean(process.env.CLOUDINARY_API_SECRET);
-
-if (hasCloudinary) {
-  cloudinary.config({
-    cloud_name: process.env.CLOUDINARY_CLOUD_NAME,
-    api_key: process.env.CLOUDINARY_API_KEY,
-    api_secret: process.env.CLOUDINARY_API_SECRET
-  });
-}
+const cloudinarySecureUrlPattern = /^https:\/\/res\.cloudinary\.com\/.+/i;
 
 function flattenStringLike(value: unknown): string[] {
   if (value === undefined || value === null) {
@@ -82,46 +67,31 @@ function toBoolean(value: unknown): boolean | undefined {
   return undefined;
 }
 
-async function uploadToCloudinary(file: Express.Multer.File, folder: string): Promise<string> {
-  const isImage = file.mimetype.toLowerCase().startsWith("image/");
+function extractCloudinaryUrl(file: Express.Multer.File): string {
+  const candidate =
+    (file as Express.Multer.File & { secure_url?: string; url?: string }).secure_url ||
+    (file as Express.Multer.File & { secure_url?: string; url?: string }).url ||
+    file.path;
 
-  const response = await cloudinary.uploader.upload(file.path, {
-    folder,
-    resource_type: isImage ? "image" : "auto",
-    use_filename: true,
-    unique_filename: true,
-    ...(isImage
-      ? {
-          transformation: [
-            {
-              width: 1920,
-              crop: "limit",
-              fetch_format: "auto",
-              quality: "auto:good"
-            }
-          ]
-        }
-      : {})
-  });
+  if (typeof candidate !== "string") {
+    throw new Error("Upload failed: Cloudinary URL was not returned.");
+  }
 
-  await fs.unlink(file.path).catch(() => undefined);
-  return response.secure_url;
+  const normalized = candidate.trim();
+
+  if (!cloudinarySecureUrlPattern.test(normalized)) {
+    throw new Error("Upload failed: invalid Cloudinary secure URL.");
+  }
+
+  return normalized;
 }
 
-function localUploadUrl(file: Express.Multer.File) {
-  return `/uploads/${path.basename(file.path)}`;
-}
-
-export async function uploadMediaFile(file: Express.Multer.File | undefined, folder: string): Promise<string | undefined> {
+export async function uploadMediaFile(file: Express.Multer.File | undefined, _folder: string): Promise<string | undefined> {
   if (!file) {
     return undefined;
   }
 
-  if (hasCloudinary) {
-    return uploadToCloudinary(file, folder);
-  }
-
-  return localUploadUrl(file);
+  return extractCloudinaryUrl(file);
 }
 
 export async function uploadMediaFiles(files: Express.Multer.File[] | undefined, folder: string): Promise<string[]> {

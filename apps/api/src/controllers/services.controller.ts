@@ -3,6 +3,11 @@ import { Prisma } from "@prisma/client";
 import { body } from "express-validator";
 import { prisma } from "../services/prisma.js";
 import { parseBoolean, parseGallery, uploadMediaFile, uploadMediaFiles } from "../services/media.js";
+import {
+  collectInvalidImageUrls,
+  isValidServiceImageUrl,
+  resolveServiceMedia
+} from "../services/service-media-fallback.js";
 
 const slugPattern = /^[a-z0-9]+(?:-[a-z0-9]+)*$/;
 
@@ -62,31 +67,10 @@ function parseSortOrder(value: unknown): number | undefined {
   return Math.floor(parsed);
 }
 
-function isValidImageUrl(value: string) {
-  if (!value) {
-    return false;
-  }
-
-  if (value.startsWith("data:image/")) {
-    return true;
-  }
-
-  if (value.startsWith("/uploads/") || value.startsWith("uploads/")) {
-    return true;
-  }
-
-  try {
-    const parsed = new URL(value);
-    return parsed.protocol === "http:" || parsed.protocol === "https:";
-  } catch {
-    return false;
-  }
-}
-
 function sanitizeGalleryInput(value: unknown) {
   return parseGallery(value)
     .map((item) => String(item || "").trim())
-    .filter((item) => isValidImageUrl(item));
+    .filter((item) => isValidServiceImageUrl(item));
 }
 
 const SERVICE_SELECT_LEGACY = {
@@ -173,6 +157,12 @@ function getSafeServiceSelect(missingGalleryDescriptions: boolean, missingSortOr
   }
 
   return SERVICE_SELECT_WITH_DESCRIPTIONS;
+}
+
+function normalizeServiceOutput<T extends { gallery: string[]; coverImage: string | null; imageUrl?: string | null; slug?: string; titleAr?: string }>(
+  service: T
+) {
+  return resolveServiceMedia(service);
 }
 
 function mapServiceMutationError(error: unknown) {
@@ -263,7 +253,7 @@ export async function getServices(_req: Request, res: Response) {
       select: SERVICE_SELECT_WITH_DESCRIPTIONS
     });
 
-    return res.json(services);
+    return res.json(services.map((service) => normalizeServiceOutput(service)));
   } catch (error) {
     if (!isMissingGalleryDescriptionsColumnError(error) && !isMissingSortOrderColumnError(error)) {
       throw error;
@@ -276,7 +266,7 @@ export async function getServices(_req: Request, res: Response) {
         select: SERVICE_SELECT_BASE
       });
 
-      return res.json(services.map((service) => appendEmptyGalleryDescriptions(service)));
+      return res.json(services.map((service) => normalizeServiceOutput(appendEmptyGalleryDescriptions(service))));
     } catch (fallbackError) {
       if (!isMissingSortOrderColumnError(fallbackError)) {
         throw fallbackError;
@@ -289,7 +279,9 @@ export async function getServices(_req: Request, res: Response) {
       });
 
       return res.json(
-        legacyServices.map((service, index) => appendSortOrder(appendEmptyGalleryDescriptions(service), index))
+        legacyServices.map((service, index) =>
+          normalizeServiceOutput(appendSortOrder(appendEmptyGalleryDescriptions(service), index))
+        )
       );
     }
   }
@@ -302,7 +294,7 @@ export async function getServicesAdmin(_req: Request, res: Response) {
       select: SERVICE_SELECT_WITH_DESCRIPTIONS
     });
 
-    return res.json(services);
+    return res.json(services.map((service) => normalizeServiceOutput(service)));
   } catch (error) {
     if (!isMissingGalleryDescriptionsColumnError(error) && !isMissingSortOrderColumnError(error)) {
       throw error;
@@ -314,7 +306,7 @@ export async function getServicesAdmin(_req: Request, res: Response) {
         select: SERVICE_SELECT_BASE
       });
 
-      return res.json(services.map((service) => appendEmptyGalleryDescriptions(service)));
+      return res.json(services.map((service) => normalizeServiceOutput(appendEmptyGalleryDescriptions(service))));
     } catch (fallbackError) {
       if (!isMissingSortOrderColumnError(fallbackError)) {
         throw fallbackError;
@@ -326,7 +318,9 @@ export async function getServicesAdmin(_req: Request, res: Response) {
       });
 
       return res.json(
-        legacyServices.map((service, index) => appendSortOrder(appendEmptyGalleryDescriptions(service), index))
+        legacyServices.map((service, index) =>
+          normalizeServiceOutput(appendSortOrder(appendEmptyGalleryDescriptions(service), index))
+        )
       );
     }
   }
@@ -374,7 +368,7 @@ export async function getServiceBySlug(req: Request, res: Response) {
     return res.status(404).json({ message: "الخدمة غير موجودة" });
   }
 
-  return res.json(serviceData);
+  return res.json(normalizeServiceOutput(serviceData));
 }
 
 export async function createService(req: Request, res: Response) {
@@ -384,12 +378,37 @@ export async function createService(req: Request, res: Response) {
     const galleryFiles = files?.gallery || [];
     const videoFile = files?.video?.[0];
 
+    const inputGallery = parseGallery(req.body.gallery);
+    const invalidInputGalleryItems = collectInvalidImageUrls(inputGallery);
+    if (invalidInputGalleryItems.length > 0) {
+      return res.status(422).json({
+        message: "روابط صور المعرض تحتوي على قيم غير صالحة.",
+        code: "SERVICE_INVALID_GALLERY_URLS"
+      });
+    }
+
+    const rawCoverImage = typeof req.body.coverImage === "string" ? req.body.coverImage.trim() : "";
+    if (rawCoverImage && !isValidServiceImageUrl(rawCoverImage)) {
+      return res.status(422).json({
+        message: "رابط صورة الغلاف غير صالح.",
+        code: "SERVICE_INVALID_COVER_URL"
+      });
+    }
+
+    const rawImageUrl = typeof req.body.imageUrl === "string" ? req.body.imageUrl.trim() : "";
+    if (rawImageUrl && !isValidServiceImageUrl(rawImageUrl)) {
+      return res.status(422).json({
+        message: "رابط الصورة غير صالح.",
+        code: "SERVICE_INVALID_IMAGE_URL"
+      });
+    }
+
     const coverImage = await uploadMediaFile(coverFile, "moqawalat/services");
     const uploadedGallery = await uploadMediaFiles(galleryFiles, "moqawalat/services");
     const uploadedVideo = await uploadMediaFile(videoFile, "moqawalat/services");
 
-    const gallery = sanitizeGalleryInput([...parseGallery(req.body.gallery), ...uploadedGallery]);
-    const existingDescriptions = normalizeDescriptions(parseGallery(req.body.galleryDescriptions), parseGallery(req.body.gallery).length);
+    const gallery = sanitizeGalleryInput([...inputGallery, ...uploadedGallery]);
+    const existingDescriptions = normalizeDescriptions(parseGallery(req.body.galleryDescriptions), inputGallery.length);
     const newDescriptions = normalizeDescriptions(parseGallery(req.body.newGalleryDescriptions), uploadedGallery.length);
     const galleryDescriptions = [...existingDescriptions, ...newDescriptions];
     const normalizedInputSlug = toSlug(String(req.body.slug || ""));
@@ -410,6 +429,16 @@ export async function createService(req: Request, res: Response) {
       }
     }
 
+    const resolvedMedia = resolveServiceMedia({
+      slug,
+      titleAr: req.body.titleAr,
+      coverImage: coverImage || rawCoverImage || null,
+      imageUrl: rawImageUrl || null,
+      gallery
+    });
+
+    const normalizedGalleryDescriptions = normalizeDescriptions(galleryDescriptions, resolvedMedia.gallery.length);
+
     const createData: any = {
       titleAr: req.body.titleAr,
       slug,
@@ -418,14 +447,10 @@ export async function createService(req: Request, res: Response) {
       contentAr: req.body.contentAr,
       seoTitleAr: req.body.seoTitleAr || null,
       seoDescriptionAr: req.body.seoDescriptionAr || null,
-      imageUrl: req.body.imageUrl || null,
-      coverImage:
-        coverImage ||
-        (typeof req.body.coverImage === "string" && isValidImageUrl(req.body.coverImage.trim())
-          ? req.body.coverImage.trim()
-          : null),
-      gallery,
-      galleryDescriptions,
+      imageUrl: rawImageUrl || null,
+      coverImage: resolvedMedia.coverImage,
+      gallery: resolvedMedia.gallery,
+      galleryDescriptions: normalizedGalleryDescriptions,
       videoUrl: uploadedVideo || req.body.videoUrl || null,
       isPublished: typeof isPublished === "boolean" ? isPublished : true
     };
@@ -457,7 +482,7 @@ export async function createService(req: Request, res: Response) {
       service = missingSortOrder ? appendSortOrder(service, 0) : service;
     }
 
-    return res.status(201).json(service);
+    return res.status(201).json(normalizeServiceOutput(service));
   } catch (error) {
     const mapped = mapServiceMutationError(error);
     if (mapped) {
@@ -475,26 +500,67 @@ export async function updateService(req: Request, res: Response) {
     const galleryFiles = files?.gallery || [];
     const videoFile = files?.video?.[0];
 
+    const currentService = await prisma.service.findUnique({
+      where: { id: req.params.id },
+      select: {
+        id: true,
+        slug: true,
+        titleAr: true,
+        imageUrl: true,
+        coverImage: true,
+        gallery: true
+      }
+    });
+
+    if (!currentService) {
+      return res.status(404).json({ message: "الخدمة غير موجودة", code: "SERVICE_NOT_FOUND" });
+    }
+
+    const inputGallery = parseGallery(req.body.gallery);
+    const invalidInputGalleryItems = collectInvalidImageUrls(inputGallery);
+    if (invalidInputGalleryItems.length > 0) {
+      return res.status(422).json({
+        message: "روابط صور المعرض تحتوي على قيم غير صالحة.",
+        code: "SERVICE_INVALID_GALLERY_URLS"
+      });
+    }
+
+    const rawCoverImage = typeof req.body.coverImage === "string" ? req.body.coverImage.trim() : "";
+    if (rawCoverImage && !isValidServiceImageUrl(rawCoverImage)) {
+      return res.status(422).json({
+        message: "رابط صورة الغلاف غير صالح.",
+        code: "SERVICE_INVALID_COVER_URL"
+      });
+    }
+
+    const rawImageUrl = typeof req.body.imageUrl === "string" ? req.body.imageUrl.trim() : "";
+    if (rawImageUrl && !isValidServiceImageUrl(rawImageUrl)) {
+      return res.status(422).json({
+        message: "رابط الصورة غير صالح.",
+        code: "SERVICE_INVALID_IMAGE_URL"
+      });
+    }
+
     const coverImage = await uploadMediaFile(coverFile, "moqawalat/services");
     const uploadedGallery = await uploadMediaFiles(galleryFiles, "moqawalat/services");
     const uploadedVideo = await uploadMediaFile(videoFile, "moqawalat/services");
 
-    const existingGallery = parseGallery(req.body.gallery);
+    const existingGallery = inputGallery;
     const gallery = sanitizeGalleryInput([...existingGallery, ...uploadedGallery]);
     const existingDescriptions = normalizeDescriptions(parseGallery(req.body.galleryDescriptions), existingGallery.length);
     const newDescriptions = normalizeDescriptions(parseGallery(req.body.newGalleryDescriptions), uploadedGallery.length);
-    const galleryDescriptions = [...existingDescriptions, ...newDescriptions];
+    let galleryDescriptions = [...existingDescriptions, ...newDescriptions];
     const isPublished = parseBoolean(req.body.isPublished);
     const removeCoverImage = parseBoolean(req.body.removeCoverImage) === true;
     const removeVideo = parseBoolean(req.body.removeVideoUrl) === true;
     const hasGalleryField = typeof req.body.gallery !== "undefined";
     const hasGalleryDescriptionsField = typeof req.body.galleryDescriptions !== "undefined";
-    const imageUrl = typeof req.body.imageUrl === "string" && req.body.imageUrl.length > 0 ? req.body.imageUrl : undefined;
+    const imageUrl = rawImageUrl.length > 0 ? rawImageUrl : undefined;
     const coverValue = removeCoverImage
       ? null
       : coverImage ||
-        (typeof req.body.coverImage === "string" && isValidImageUrl(req.body.coverImage.trim())
-          ? req.body.coverImage.trim() || null
+        (rawCoverImage && isValidServiceImageUrl(rawCoverImage)
+          ? rawCoverImage || null
           : undefined);
     const videoValue = removeVideo
       ? null
@@ -505,17 +571,31 @@ export async function updateService(req: Request, res: Response) {
       typeof req.body.sortOrder !== "undefined" && String(req.body.sortOrder).trim() !== "";
     const parsedSortOrder = parseSortOrder(req.body.sortOrder);
 
+    const nextSlug = normalizedUpdateSlug || currentService.slug;
+    const nextTitle = req.body.titleAr || currentService.titleAr;
+    const resolvedMedia = resolveServiceMedia({
+      slug: nextSlug,
+      titleAr: nextTitle,
+      imageUrl: imageUrl === undefined ? currentService.imageUrl : imageUrl || null,
+      coverImage: coverValue === undefined ? currentService.coverImage : coverValue,
+      gallery: hasGalleryField ? gallery : currentService.gallery
+    });
+
+    if (hasGalleryDescriptionsField) {
+      galleryDescriptions = normalizeDescriptions(galleryDescriptions, resolvedMedia.gallery.length);
+    }
+
     const updateData: any = {
       titleAr: req.body.titleAr,
-      slug: normalizedUpdateSlug || undefined,
+      slug: nextSlug || undefined,
       sortOrder: hasSortOrderField ? parsedSortOrder : undefined,
       shortDescAr: req.body.shortDescAr,
       contentAr: req.body.contentAr,
       seoTitleAr: req.body.seoTitleAr || null,
       seoDescriptionAr: req.body.seoDescriptionAr || null,
       imageUrl,
-      coverImage: coverValue,
-      gallery: hasGalleryField ? gallery : undefined,
+      coverImage: resolvedMedia.coverImage,
+      gallery: resolvedMedia.gallery,
       galleryDescriptions: hasGalleryDescriptionsField ? galleryDescriptions : undefined,
       videoUrl: videoValue,
       isPublished: typeof isPublished === "boolean" ? isPublished : undefined
@@ -556,7 +636,7 @@ export async function updateService(req: Request, res: Response) {
       service = missingSortOrder ? appendSortOrder(service, 0) : service;
     }
 
-    return res.json(service);
+    return res.json(normalizeServiceOutput(service));
   } catch (error) {
     const mapped = mapServiceMutationError(error);
     if (mapped) {

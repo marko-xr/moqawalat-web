@@ -1,4 +1,3 @@
-import "dotenv/config";
 import "express-async-errors";
 import express from "express";
 import cors from "cors";
@@ -126,8 +125,15 @@ app.use((err: Error, _req: express.Request, res: express.Response, _next: expres
 
   if (err.message === "Unsupported file type") {
     return res.status(415).json({
-      message: "نوع الملف غير مدعوم. الأنواع المسموحة: الصور و mp4 و webm و mov.",
+      message: "نوع الملف غير مدعوم. الأنواع المسموحة: الصور فقط.",
       code: "UNSUPPORTED_FILE_TYPE"
+    });
+  }
+
+  if (err.message.startsWith("Cloudinary is not configured")) {
+    return res.status(500).json({
+      message: "Cloudinary configuration is missing on the server.",
+      code: "CLOUDINARY_NOT_CONFIGURED"
     });
   }
 

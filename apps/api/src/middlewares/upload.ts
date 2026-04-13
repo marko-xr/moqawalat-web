@@ -1,43 +1,53 @@
 import multer from "multer";
-import path from "node:path";
-import fs from "node:fs";
+import type { NextFunction, Request, Response } from "express";
+import { CloudinaryStorage } from "multer-storage-cloudinary";
+import { cloudinary, ensureCloudinaryConfigured } from "../config/cloudinary.js";
 
-const uploadDir = path.resolve(process.cwd(), "uploads");
+const routeFolderMap = new Map<string, string>([
+  ["/api/services", "moqawalat/services"],
+  ["/api/service-seo", "moqawalat/seo-services"],
+  ["/api/projects", "moqawalat/projects"],
+  ["/api/blog", "moqawalat/blog"],
+  ["/api/leads", "moqawalat/leads"]
+]);
 
-if (!fs.existsSync(uploadDir)) {
-  fs.mkdirSync(uploadDir, { recursive: true });
+function resolveUploadFolder(baseUrl: string): string {
+  const normalizedBaseUrl = baseUrl.toLowerCase();
+
+  for (const [routePrefix, folder] of routeFolderMap.entries()) {
+    if (normalizedBaseUrl.startsWith(routePrefix)) {
+      return folder;
+    }
+  }
+
+  return "moqawalat/uploads";
 }
 
-const storage = multer.diskStorage({
-  destination: (_req, _file, cb) => cb(null, uploadDir),
-  filename: (_req, file, cb) => {
-    const uniqueName = `${Date.now()}-${Math.round(Math.random() * 1e9)}${path.extname(file.originalname)}`;
-    cb(null, uniqueName);
+const storage = new CloudinaryStorage({
+  cloudinary,
+  params: async (req) => {
+    ensureCloudinaryConfigured();
+
+    return {
+      folder: resolveUploadFolder(req.baseUrl || req.originalUrl || ""),
+      resource_type: "image",
+      transformation: [{ width: 1920, crop: "limit", fetch_format: "auto", quality: "auto:good" }]
+    };
   }
 });
-
-const cmsVideoTypes = ["video/mp4", "video/webm", "video/quicktime"];
-const leadVideoTypes = [
-  "video/mp4",
-  "video/webm",
-  "video/quicktime",
-  "video/x-msvideo",
-  "video/x-matroska",
-  "video/3gpp"
-];
 
 function isImageMimeType(mimeType: string) {
   return mimeType.toLowerCase().startsWith("image/");
 }
 
-function createUploader(options: { maxSizeMb: number; allowImages?: boolean; allowedTypes?: string[] }) {
-  const { maxSizeMb, allowImages = false, allowedTypes = [] } = options;
+function createUploader(options: { maxSizeMb: number }) {
+  const { maxSizeMb } = options;
 
   return multer({
     storage,
     limits: { fileSize: maxSizeMb * 1024 * 1024 },
     fileFilter: (_req, file, cb) => {
-      if ((allowImages && isImageMimeType(file.mimetype)) || allowedTypes.includes(file.mimetype)) {
+      if (isImageMimeType(file.mimetype)) {
         cb(null, true);
       } else {
         cb(new Error("Unsupported file type"));
@@ -46,5 +56,34 @@ function createUploader(options: { maxSizeMb: number; allowImages?: boolean; all
   });
 }
 
-export const upload = createUploader({ maxSizeMb: 25, allowImages: true, allowedTypes: leadVideoTypes });
-export const cmsUpload = createUploader({ maxSizeMb: 25, allowImages: true, allowedTypes: cmsVideoTypes });
+function getUploadedFiles(req: Request): Express.Multer.File[] {
+  const single = req.file ? [req.file] : [];
+
+  if (!req.files) {
+    return single;
+  }
+
+  if (Array.isArray(req.files)) {
+    return [...single, ...req.files];
+  }
+
+  const grouped = Object.values(req.files).flat();
+  return [...single, ...grouped];
+}
+
+export function ensureNonEmptyUploads(req: Request, res: Response, next: NextFunction) {
+  const files = getUploadedFiles(req);
+  const hasEmptyFile = files.some((file) => typeof file.size !== "number" || file.size <= 0);
+
+  if (hasEmptyFile) {
+    return res.status(400).json({
+      message: "Empty upload is not allowed.",
+      code: "EMPTY_UPLOAD"
+    });
+  }
+
+  return next();
+}
+
+export const upload = createUploader({ maxSizeMb: 25 });
+export const cmsUpload = createUploader({ maxSizeMb: 25 });

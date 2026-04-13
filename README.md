@@ -125,6 +125,9 @@ API_PORT=4000
 WEB_URL="http://localhost:3000"
 ```
 
+Important:
+- استخدم `postgresql://` فقط في `DATABASE_URL`.
+
 ---
 
 ## 4) Database Setup (PostgreSQL + Prisma)
@@ -140,6 +143,15 @@ npm run prisma:generate
 npm run prisma:migrate -- --name init
 npm run prisma:seed
 ```
+
+### Run maintenance scripts safely
+```bash
+npm run cleanup:images
+```
+
+Notes:
+- السكربتات تحمل `.env` تلقائيا من الجذر/الـ API وتتحقق من `DATABASE_URL` قبل أي اتصال.
+- يتم تسجيل وضع الاتصال (`DIRECT` أو `INVALID`) مع عنوان اتصال منقح بدون كلمات مرور.
 
 Seed creates:
 - Owner user: `owner@moqawalat.sa`
@@ -242,7 +254,7 @@ Validated builds:
    ```bash
    npm install
    npm run prisma:generate
-   npm run prisma:migrate -- --name prod
+  npm run prisma:migrate -- --name prod
    npm run prisma:seed
    npm run build --workspace @moqawalat/api
    ```
