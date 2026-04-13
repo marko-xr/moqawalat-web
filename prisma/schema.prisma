@@ -7,18 +7,6 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
-enum UserRole {
-  OWNER
-  ADMIN
-}
-
-enum LeadStatus {
-  NEW
-  CONTACTED
-  QUALIFIED
-  CLOSED
-}
-
 model User {
   id        String   @id @default(cuid())
   name      String
@@ -30,29 +18,28 @@ model User {
 }
 
 model Service {
-  id              String   @id @default(cuid())
-  titleAr         String
-  slug            String   @unique
-  sortOrder       Int      @default(0)
-  shortDescAr     String
-  contentAr       String
-  seoTitleAr      String?
-  seoDescriptionAr String?
-  imageUrl        String?
-  coverImage      String?
-  gallery         String[] @default([])
-  galleryDescriptions String[] @default([])
-  videoUrl        String?
-  isPublished     Boolean  @default(true)
-  seoPage         ServiceSeoPage?
-  createdAt       DateTime @default(now())
-  updatedAt       DateTime @updatedAt
+  id                  String          @id @default(cuid())
+  titleAr             String
+  slug                String          @unique
+  shortDescAr         String
+  contentAr           String
+  seoTitleAr          String?
+  seoDescriptionAr    String?
+  imageUrl            String?
+  createdAt           DateTime        @default(now())
+  updatedAt           DateTime        @updatedAt
+  coverImage          String?
+  gallery             String[]        @default([])
+  isPublished         Boolean         @default(true)
+  videoUrl            String?
+  galleryDescriptions String[]        @default([])
+  sortOrder           Int             @default(0)
+  seoPage             ServiceSeoPage?
 }
 
 model ServiceSeoPage {
   id              String   @id @default(cuid())
   serviceId       String   @unique
-  service         Service  @relation(fields: [serviceId], references: [id], onDelete: Cascade)
   title           String
   slug            String   @unique
   metaTitle       String?
@@ -61,40 +48,41 @@ model ServiceSeoPage {
   images          String[] @default([])
   faq             Json
   createdAt       DateTime @default(now())
-  updatedAt       DateTime @updatedAt
+  updatedAt       DateTime @default(now()) @updatedAt
+  service         Service  @relation(fields: [serviceId], references: [id], onDelete: Cascade)
 }
 
 model Project {
-  id            String   @id @default(cuid())
-  titleAr       String
-  slug          String   @unique
-  locationAr    String
-  categoryAr    String
-  descriptionAr String
-  beforeImage   String?
-  afterImage    String?
-  coverImage    String?
-  gallery       String[] @default([])
-  videoUrl      String?
-  seoTitleAr    String?
+  id               String   @id @default(cuid())
+  titleAr          String
+  slug             String   @unique
+  locationAr       String
+  categoryAr       String
+  descriptionAr    String
+  beforeImage      String?
+  afterImage       String?
+  createdAt        DateTime @default(now())
+  updatedAt        DateTime @updatedAt
+  coverImage       String?
+  gallery          String[] @default([])
+  isPublished      Boolean  @default(true)
   seoDescriptionAr String?
-  isPublished   Boolean  @default(true)
-  createdAt     DateTime @default(now())
-  updatedAt     DateTime @updatedAt
+  seoTitleAr       String?
+  videoUrl         String?
 }
 
 model BlogPost {
-  id              String   @id @default(cuid())
-  titleAr         String
-  slug            String   @unique
-  excerptAr       String
-  contentAr       String
-  seoTitleAr      String?
+  id               String   @id @default(cuid())
+  titleAr          String
+  slug             String   @unique
+  excerptAr        String
+  contentAr        String
+  seoTitleAr       String?
   seoDescriptionAr String?
-  coverImage      String?
-  published       Boolean  @default(true)
-  createdAt       DateTime @default(now())
-  updatedAt       DateTime @updatedAt
+  coverImage       String?
+  published        Boolean  @default(true)
+  createdAt        DateTime @default(now())
+  updatedAt        DateTime @updatedAt
 }
 
 model Lead {
@@ -105,15 +93,15 @@ model Lead {
   city        String
   serviceType String
   message     String?
-  locationUrl String?
   imageUrl    String?
   status      LeadStatus @default(NEW)
-  source      String      @default("website")
+  source      String     @default("website")
   crmNotes    String?
   pageUrl     String?
   userAgent   String?
-  createdAt   DateTime    @default(now())
-  updatedAt   DateTime    @updatedAt
+  createdAt   DateTime   @default(now())
+  updatedAt   DateTime   @updatedAt
+  locationUrl String?
 }
 
 model Setting {
@@ -134,4 +122,16 @@ model ClickEvent {
   type      String
   pageUrl   String?
   createdAt DateTime @default(now())
+}
+
+enum UserRole {
+  OWNER
+  ADMIN
+}
+
+enum LeadStatus {
+  NEW
+  CONTACTED
+  QUALIFIED
+  CLOSED
 }

@@ -53,7 +53,7 @@ export function isServiceFallbackImage(value: unknown): value is string {
 }
 
 export function isRealServiceImageUrl(value: unknown): value is string {
-  return isValidServiceImageUrl(value) && !isServiceFallbackImage(value);
+  return isValidServiceImageUrl(value);
 }
 
 export function getServiceFallbackGallery(seed: string, count = 4): string[] {
@@ -86,7 +86,7 @@ export function resolveServiceMedia<T extends { slug?: string | null; titleAr?: 
     (typeof service.coverImage === "string" ? service.coverImage.trim() : "") ||
     (typeof service.imageUrl === "string" ? service.imageUrl.trim() : "");
 
-  const coverImage = isRealServiceImageUrl(coverCandidate) ? coverCandidate : gallery[0];
+  const coverImage = isValidServiceImageUrl(coverCandidate) ? coverCandidate : gallery[0];
 
   return {
     ...service,

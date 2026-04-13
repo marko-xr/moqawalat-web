@@ -20,9 +20,21 @@ function buildApiUploadPattern(apiUrl) {
 }
 
 const apiUploadPattern = buildApiUploadPattern(process.env.NEXT_PUBLIC_API_URL || process.env.API_URL || "");
+const apiUploadHost = apiUploadPattern?.hostname || null;
+const imageDomains = Array.from(
+  new Set([
+    "localhost",
+    "127.0.0.1",
+    "moqawalatapi-production.up.railway.app",
+    "res.cloudinary.com",
+    ...(apiUploadHost ? [apiUploadHost] : [])
+  ])
+);
 
 const nextConfig = {
   images: {
+    domains: imageDomains,
+    qualities: [75, 84, 90],
     formats: ["image/avif", "image/webp"],
     minimumCacheTTL: 2678400,
     remotePatterns: [

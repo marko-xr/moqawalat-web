@@ -74,6 +74,56 @@ function sanitizeGalleryInput(value: unknown) {
     .filter((item) => isValidServiceImageUrl(item));
 }
 
+type ServiceImageLogEntry = {
+  id: string;
+  coverImage: string | null;
+  gallery: string[];
+};
+
+function hasRealServiceImage(values: Array<string | null | undefined>) {
+  return values.some((value) => isValidServiceImageUrl(value) && !isServiceFallbackImage(value));
+}
+
+function logIncomingServiceImages(
+  action: "create" | "update",
+  serviceId: string | null,
+  coverImage: string,
+  imageUrl: string,
+  gallery: string[]
+) {
+  console.log("SERVICE INCOMING IMAGES", action, serviceId, {
+    coverImage,
+    imageUrl,
+    gallery
+  });
+}
+
+function logServiceApiResponse(service: ServiceImageLogEntry) {
+  console.log("SERVICE API RESPONSE", service.id, service.coverImage, service.gallery);
+}
+
+async function verifyPersistedServiceImages(serviceId: string, context: "create" | "update", expectedRealImage: boolean) {
+  const persisted = await prisma.service.findUnique({
+    where: { id: serviceId },
+    select: {
+      id: true,
+      coverImage: true,
+      gallery: true
+    }
+  });
+
+  if (!persisted) {
+    throw new Error(`SERVICE_DB_VERIFY_NOT_FOUND:${serviceId}`);
+  }
+
+  console.log("SERVICE DB VERIFY", persisted.id, persisted.coverImage, persisted.gallery);
+
+  const persistedHasRealImage = hasRealServiceImage([persisted.coverImage, ...persisted.gallery]);
+  if (expectedRealImage && !persistedHasRealImage) {
+    throw new Error("SERVICE_IMAGE_PERSISTENCE_MISMATCH");
+  }
+}
+
 const SERVICE_SELECT_LEGACY = {
   id: true,
   titleAr: true,
@@ -167,6 +217,24 @@ function normalizeServiceOutput<T extends { gallery: string[]; coverImage: strin
 }
 
 function mapServiceMutationError(error: unknown) {
+  if (error instanceof Error) {
+    if (error.message === "SERVICE_IMAGE_PERSISTENCE_MISMATCH") {
+      return {
+        status: 500,
+        message: "فشل التحقق من حفظ صور الخدمة بعد الحفظ. يرجى إعادة المحاولة.",
+        code: "SERVICE_IMAGE_PERSISTENCE_MISMATCH"
+      };
+    }
+
+    if (error.message.startsWith("SERVICE_DB_VERIFY_NOT_FOUND:")) {
+      return {
+        status: 500,
+        message: "تعذر التحقق من بيانات الخدمة بعد الحفظ.",
+        code: "SERVICE_DB_VERIFY_NOT_FOUND"
+      };
+    }
+  }
+
   if (error instanceof Prisma.PrismaClientKnownRequestError) {
     if (error.code === "P2002") {
       const target = Array.isArray((error.meta as { target?: string[] } | undefined)?.target)
@@ -254,7 +322,10 @@ export async function getServices(_req: Request, res: Response) {
       select: SERVICE_SELECT_WITH_DESCRIPTIONS
     });
 
-    return res.json(services.map((service) => normalizeServiceOutput(service)));
+    const normalized = services.map((service) => normalizeServiceOutput(service));
+    normalized.forEach((service) => logServiceApiResponse(service));
+
+    return res.json(normalized);
   } catch (error) {
     if (!isMissingGalleryDescriptionsColumnError(error) && !isMissingSortOrderColumnError(error)) {
       throw error;
@@ -267,7 +338,10 @@ export async function getServices(_req: Request, res: Response) {
         select: SERVICE_SELECT_BASE
       });
 
-      return res.json(services.map((service) => normalizeServiceOutput(appendEmptyGalleryDescriptions(service))));
+      const normalized = services.map((service) => normalizeServiceOutput(appendEmptyGalleryDescriptions(service)));
+      normalized.forEach((service) => logServiceApiResponse(service));
+
+      return res.json(normalized);
     } catch (fallbackError) {
       if (!isMissingSortOrderColumnError(fallbackError)) {
         throw fallbackError;
@@ -279,11 +353,12 @@ export async function getServices(_req: Request, res: Response) {
         select: SERVICE_SELECT_LEGACY
       });
 
-      return res.json(
-        legacyServices.map((service, index) =>
-          normalizeServiceOutput(appendSortOrder(appendEmptyGalleryDescriptions(service), index))
-        )
+      const normalized = legacyServices.map((service, index) =>
+        normalizeServiceOutput(appendSortOrder(appendEmptyGalleryDescriptions(service), index))
       );
+      normalized.forEach((service) => logServiceApiResponse(service));
+
+      return res.json(normalized);
     }
   }
 }
@@ -295,7 +370,10 @@ export async function getServicesAdmin(_req: Request, res: Response) {
       select: SERVICE_SELECT_WITH_DESCRIPTIONS
     });
 
-    return res.json(services.map((service) => normalizeServiceOutput(service)));
+    const normalized = services.map((service) => normalizeServiceOutput(service));
+    normalized.forEach((service) => logServiceApiResponse(service));
+
+    return res.json(normalized);
   } catch (error) {
     if (!isMissingGalleryDescriptionsColumnError(error) && !isMissingSortOrderColumnError(error)) {
       throw error;
@@ -307,7 +385,10 @@ export async function getServicesAdmin(_req: Request, res: Response) {
         select: SERVICE_SELECT_BASE
       });
 
-      return res.json(services.map((service) => normalizeServiceOutput(appendEmptyGalleryDescriptions(service))));
+      const normalized = services.map((service) => normalizeServiceOutput(appendEmptyGalleryDescriptions(service)));
+      normalized.forEach((service) => logServiceApiResponse(service));
+
+      return res.json(normalized);
     } catch (fallbackError) {
       if (!isMissingSortOrderColumnError(fallbackError)) {
         throw fallbackError;
@@ -318,11 +399,12 @@ export async function getServicesAdmin(_req: Request, res: Response) {
         select: SERVICE_SELECT_LEGACY
       });
 
-      return res.json(
-        legacyServices.map((service, index) =>
-          normalizeServiceOutput(appendSortOrder(appendEmptyGalleryDescriptions(service), index))
-        )
+      const normalized = legacyServices.map((service, index) =>
+        normalizeServiceOutput(appendSortOrder(appendEmptyGalleryDescriptions(service), index))
       );
+      normalized.forEach((service) => logServiceApiResponse(service));
+
+      return res.json(normalized);
     }
   }
 }
@@ -369,7 +451,10 @@ export async function getServiceBySlug(req: Request, res: Response) {
     return res.status(404).json({ message: "الخدمة غير موجودة" });
   }
 
-  return res.json(normalizeServiceOutput(serviceData));
+  const normalizedService = normalizeServiceOutput(serviceData);
+  logServiceApiResponse(normalizedService);
+
+  return res.json(normalizedService);
 }
 
 export async function createService(req: Request, res: Response) {
@@ -380,6 +465,11 @@ export async function createService(req: Request, res: Response) {
     const videoFile = files?.video?.[0];
 
     const inputGallery = parseGallery(req.body.gallery);
+    const rawCoverImage = typeof req.body.coverImage === "string" ? req.body.coverImage.trim() : "";
+    const rawImageUrl = typeof req.body.imageUrl === "string" ? req.body.imageUrl.trim() : "";
+
+    logIncomingServiceImages("create", null, rawCoverImage, rawImageUrl, inputGallery);
+
     const invalidInputGalleryItems = collectInvalidImageUrls(inputGallery);
     if (invalidInputGalleryItems.length > 0) {
       return res.status(422).json({
@@ -388,33 +478,10 @@ export async function createService(req: Request, res: Response) {
       });
     }
 
-    if (inputGallery.some((item) => isServiceFallbackImage(item))) {
-      return res.status(422).json({
-        message: "لا يمكن حفظ صور افتراضية كصور خدمة رئيسية.",
-        code: "SERVICE_FALLBACK_GALLERY_BLOCKED"
-      });
-    }
-
-    const rawCoverImage = typeof req.body.coverImage === "string" ? req.body.coverImage.trim() : "";
-    if (rawCoverImage && isServiceFallbackImage(rawCoverImage)) {
-      return res.status(422).json({
-        message: "لا يمكن حفظ صورة غلاف افتراضية.",
-        code: "SERVICE_FALLBACK_COVER_BLOCKED"
-      });
-    }
-
     if (rawCoverImage && !isValidServiceImageUrl(rawCoverImage)) {
       return res.status(422).json({
         message: "رابط صورة الغلاف غير صالح.",
         code: "SERVICE_INVALID_COVER_URL"
-      });
-    }
-
-    const rawImageUrl = typeof req.body.imageUrl === "string" ? req.body.imageUrl.trim() : "";
-    if (rawImageUrl && isServiceFallbackImage(rawImageUrl)) {
-      return res.status(422).json({
-        message: "لا يمكن حفظ صورة افتراضية في حقل الصورة.",
-        code: "SERVICE_FALLBACK_IMAGE_BLOCKED"
       });
     }
 
@@ -451,15 +518,8 @@ export async function createService(req: Request, res: Response) {
       }
     }
 
-    const resolvedMedia = resolveServiceMedia({
-      slug,
-      titleAr: req.body.titleAr,
-      coverImage: coverImage || rawCoverImage || null,
-      imageUrl: rawImageUrl || null,
-      gallery
-    });
-
-    const normalizedGalleryDescriptions = normalizeDescriptions(galleryDescriptions, resolvedMedia.gallery.length);
+    const coverImageValue = coverImage || rawCoverImage || rawImageUrl || gallery[0] || null;
+    const normalizedGalleryDescriptions = normalizeDescriptions(galleryDescriptions, gallery.length);
 
     const createData: any = {
       titleAr: req.body.titleAr,
@@ -470,8 +530,8 @@ export async function createService(req: Request, res: Response) {
       seoTitleAr: req.body.seoTitleAr || null,
       seoDescriptionAr: req.body.seoDescriptionAr || null,
       imageUrl: rawImageUrl || null,
-      coverImage: resolvedMedia.coverImage,
-      gallery: resolvedMedia.gallery,
+      coverImage: coverImageValue,
+      gallery,
       galleryDescriptions: normalizedGalleryDescriptions,
       videoUrl: uploadedVideo || req.body.videoUrl || null,
       isPublished: typeof isPublished === "boolean" ? isPublished : true
@@ -504,7 +564,13 @@ export async function createService(req: Request, res: Response) {
       service = missingSortOrder ? appendSortOrder(service, 0) : service;
     }
 
-    return res.status(201).json(normalizeServiceOutput(service));
+    const expectedRealImage = hasRealServiceImage([coverImage, rawCoverImage, rawImageUrl, ...gallery]);
+    await verifyPersistedServiceImages(service.id, "create", expectedRealImage);
+
+    const normalizedService = normalizeServiceOutput(service);
+    logServiceApiResponse(normalizedService);
+
+    return res.status(201).json(normalizedService);
   } catch (error) {
     const mapped = mapServiceMutationError(error);
     if (mapped) {
@@ -539,6 +605,11 @@ export async function updateService(req: Request, res: Response) {
     }
 
     const inputGallery = parseGallery(req.body.gallery);
+    const rawCoverImage = typeof req.body.coverImage === "string" ? req.body.coverImage.trim() : "";
+    const rawImageUrl = typeof req.body.imageUrl === "string" ? req.body.imageUrl.trim() : "";
+
+    logIncomingServiceImages("update", req.params.id, rawCoverImage, rawImageUrl, inputGallery);
+
     const invalidInputGalleryItems = collectInvalidImageUrls(inputGallery);
     if (invalidInputGalleryItems.length > 0) {
       return res.status(422).json({
@@ -547,33 +618,10 @@ export async function updateService(req: Request, res: Response) {
       });
     }
 
-    if (inputGallery.some((item) => isServiceFallbackImage(item))) {
-      return res.status(422).json({
-        message: "لا يمكن حفظ صور افتراضية كصور خدمة رئيسية.",
-        code: "SERVICE_FALLBACK_GALLERY_BLOCKED"
-      });
-    }
-
-    const rawCoverImage = typeof req.body.coverImage === "string" ? req.body.coverImage.trim() : "";
-    if (rawCoverImage && isServiceFallbackImage(rawCoverImage)) {
-      return res.status(422).json({
-        message: "لا يمكن حفظ صورة غلاف افتراضية.",
-        code: "SERVICE_FALLBACK_COVER_BLOCKED"
-      });
-    }
-
     if (rawCoverImage && !isValidServiceImageUrl(rawCoverImage)) {
       return res.status(422).json({
         message: "رابط صورة الغلاف غير صالح.",
         code: "SERVICE_INVALID_COVER_URL"
-      });
-    }
-
-    const rawImageUrl = typeof req.body.imageUrl === "string" ? req.body.imageUrl.trim() : "";
-    if (rawImageUrl && isServiceFallbackImage(rawImageUrl)) {
-      return res.status(422).json({
-        message: "لا يمكن حفظ صورة افتراضية في حقل الصورة.",
-        code: "SERVICE_FALLBACK_IMAGE_BLOCKED"
       });
     }
 
@@ -588,15 +636,15 @@ export async function updateService(req: Request, res: Response) {
     const uploadedGallery = await uploadMediaFiles(galleryFiles, "moqawalat/services");
     const uploadedVideo = await uploadMediaFile(videoFile, "moqawalat/services");
 
-    const existingGallery = inputGallery;
-    const gallery = sanitizeGalleryInput([...existingGallery, ...uploadedGallery]);
-    const existingDescriptions = normalizeDescriptions(parseGallery(req.body.galleryDescriptions), existingGallery.length);
+    const hasGalleryField = typeof req.body.gallery !== "undefined";
+    const baseGallery = hasGalleryField ? inputGallery : currentService.gallery;
+    const gallery = sanitizeGalleryInput([...baseGallery, ...uploadedGallery]);
+    const existingDescriptions = normalizeDescriptions(parseGallery(req.body.galleryDescriptions), baseGallery.length);
     const newDescriptions = normalizeDescriptions(parseGallery(req.body.newGalleryDescriptions), uploadedGallery.length);
     let galleryDescriptions = [...existingDescriptions, ...newDescriptions];
     const isPublished = parseBoolean(req.body.isPublished);
     const removeCoverImage = parseBoolean(req.body.removeCoverImage) === true;
     const removeVideo = parseBoolean(req.body.removeVideoUrl) === true;
-    const hasGalleryField = typeof req.body.gallery !== "undefined";
     const hasGalleryDescriptionsField = typeof req.body.galleryDescriptions !== "undefined";
     const imageUrl = rawImageUrl.length > 0 ? rawImageUrl : undefined;
     const coverValue = removeCoverImage
@@ -615,17 +663,13 @@ export async function updateService(req: Request, res: Response) {
     const parsedSortOrder = parseSortOrder(req.body.sortOrder);
 
     const nextSlug = normalizedUpdateSlug || currentService.slug;
-    const nextTitle = req.body.titleAr || currentService.titleAr;
-    const resolvedMedia = resolveServiceMedia({
-      slug: nextSlug,
-      titleAr: nextTitle,
-      imageUrl: imageUrl === undefined ? currentService.imageUrl : imageUrl || null,
-      coverImage: coverValue === undefined ? currentService.coverImage : coverValue,
-      gallery: hasGalleryField ? gallery : currentService.gallery
-    });
+    const nextImageUrl = imageUrl === undefined ? currentService.imageUrl : imageUrl || null;
+    const nextGallery = hasGalleryField || uploadedGallery.length > 0 ? gallery : currentService.gallery;
+    const currentOrIncomingCover = coverValue === undefined ? currentService.coverImage : coverValue;
+    const nextCoverImage = currentOrIncomingCover || nextImageUrl || nextGallery[0] || null;
 
     if (hasGalleryDescriptionsField) {
-      galleryDescriptions = normalizeDescriptions(galleryDescriptions, resolvedMedia.gallery.length);
+      galleryDescriptions = normalizeDescriptions(galleryDescriptions, nextGallery.length);
     }
 
     const updateData: any = {
@@ -637,8 +681,8 @@ export async function updateService(req: Request, res: Response) {
       seoTitleAr: req.body.seoTitleAr || null,
       seoDescriptionAr: req.body.seoDescriptionAr || null,
       imageUrl,
-      coverImage: resolvedMedia.coverImage,
-      gallery: resolvedMedia.gallery,
+      coverImage: nextCoverImage,
+      gallery: nextGallery,
       galleryDescriptions: hasGalleryDescriptionsField ? galleryDescriptions : undefined,
       videoUrl: videoValue,
       isPublished: typeof isPublished === "boolean" ? isPublished : undefined
@@ -679,7 +723,13 @@ export async function updateService(req: Request, res: Response) {
       service = missingSortOrder ? appendSortOrder(service, 0) : service;
     }
 
-    return res.json(normalizeServiceOutput(service));
+    const expectedRealImage = hasRealServiceImage([coverImage, rawCoverImage, rawImageUrl, ...inputGallery, ...uploadedGallery]);
+    await verifyPersistedServiceImages(service.id, "update", expectedRealImage);
+
+    const normalizedService = normalizeServiceOutput(service);
+    logServiceApiResponse(normalizedService);
+
+    return res.json(normalizedService);
   } catch (error) {
     const mapped = mapServiceMutationError(error);
     if (mapped) {
