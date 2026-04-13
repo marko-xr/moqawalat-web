@@ -4,6 +4,7 @@ import Hero from "@/components/roof-insulation-dammam/Hero";
 import Services from "@/components/roof-insulation-dammam/Services";
 import FAQ from "@/components/roof-insulation-dammam/FAQ";
 import CTA from "@/components/roof-insulation-dammam/CTA";
+import ServiceImageDebugPanel from "@/components/dev/ServiceImageDebugPanel";
 import { getServiceSeoPageByServiceSlug, getServiceSeoPageBySlug } from "@/lib/api";
 import { pickFirstImage, sanitizeImageList } from "@/lib/media";
 import { getSiteUrl } from "@/lib/site-url";
@@ -408,7 +409,8 @@ export async function generateMetadata(): Promise<Metadata> {
 }
 
 export default async function EpoxyFlooringDammamPage() {
-  const model = buildModel(await getSeoSource());
+  const seoSource = await getSeoSource();
+  const model = buildModel(seoSource);
   const siteUrl = getSiteUrl();
   const pageUrl = `${siteUrl}${pagePath}`;
   const phone = process.env.NEXT_PUBLIC_PHONE_NUMBER || "966556741880";
@@ -507,6 +509,15 @@ export default async function EpoxyFlooringDammamPage() {
         </section>
 
         <CTA title={model.ctaBottomTitle} description={model.ctaBottomDescription} eventSource="footer-cta" />
+
+        {process.env.NODE_ENV !== "production" ? (
+          <ServiceImageDebugPanel
+            pageSlug={pageSlug}
+            coverImage={seoSource?.contentSections?.heroImage || null}
+            gallery={seoSource?.images}
+            sourceLabel="epoxy-flooring-dammam"
+          />
+        ) : null}
       </div>
 
       <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(localBusinessSchema) }} />

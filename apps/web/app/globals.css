@@ -1302,6 +1302,30 @@ footer {
   font-weight: 700;
 }
 
+.service-image-debug {
+  margin-top: 12px;
+  border: 1px dashed #f59e0b;
+  border-radius: 12px;
+  padding: 12px;
+  background: #fff8e1;
+  direction: ltr;
+}
+
+.service-image-debug-title {
+  display: block;
+  margin-bottom: 8px;
+}
+
+.service-image-debug-label {
+  margin-top: 8px;
+}
+
+.service-image-debug-pre {
+  margin: 6px 0 0;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+
 @keyframes skeleton-wave {
   0% {
     background-position: 200% 0;

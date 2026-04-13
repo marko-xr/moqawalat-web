@@ -4,6 +4,7 @@ import { notFound } from "next/navigation";
 import Image from "next/image";
 import { getSiteUrl } from "@/lib/site-url";
 import { pickFirstImage, sanitizeImageList } from "@/lib/media";
+import ServiceImageDebugPanel from "@/components/dev/ServiceImageDebugPanel";
 
 export const revalidate = 300;
 
@@ -167,6 +168,15 @@ export default async function ServiceDetails({ params }: { params: Promise<{ slu
               </a>
             )}
           </div>
+        ) : null}
+
+        {process.env.NODE_ENV !== "production" ? (
+          <ServiceImageDebugPanel
+            pageSlug={service.slug}
+            coverImage={service.coverImage || service.imageUrl || null}
+            gallery={service.gallery}
+            sourceLabel="services/[slug]"
+          />
         ) : null}
       </div>
 
