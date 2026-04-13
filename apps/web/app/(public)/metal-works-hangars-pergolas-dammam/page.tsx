@@ -12,7 +12,7 @@ export const revalidate = 300;
 
 const pagePath = "/metal-works-hangars-pergolas-dammam";
 const pageSlug = "metal-works-hangars-pergolas-dammam";
-const legacyServiceSlug = "metal-works";
+const legacyServiceSlug = "blacksmith-works-hangars-pergolas-dammam";
 
 type MetalWorksPageModel = {
   pageTitle: string;

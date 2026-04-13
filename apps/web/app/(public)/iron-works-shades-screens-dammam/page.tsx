@@ -12,7 +12,7 @@ export const revalidate = 300;
 
 const pagePath = "/iron-works-shades-screens-dammam";
 const pageSlug = "iron-works-shades-screens-dammam";
-const legacyServiceSlug = "metal-works";
+const legacyServiceSlug = "iron-works-shades-barriers-dammam";
 
 type IronWorksPageModel = {
   pageTitle: string;

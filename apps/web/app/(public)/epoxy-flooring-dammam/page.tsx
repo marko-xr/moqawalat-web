@@ -12,7 +12,7 @@ export const revalidate = 300;
 
 const pagePath = "/epoxy-flooring-dammam";
 const pageSlug = "epoxy-flooring-dammam";
-const legacyServiceSlug = "epoxy-flooring";
+const legacyServiceSlug = "epoxy-flooring-tanks-lining-dammam";
 
 type EpoxyPageModel = {
   pageTitle: string;
