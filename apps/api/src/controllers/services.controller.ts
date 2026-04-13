@@ -5,6 +5,7 @@ import { prisma } from "../services/prisma.js";
 import { parseBoolean, parseGallery, uploadMediaFile, uploadMediaFiles } from "../services/media.js";
 import {
   collectInvalidImageUrls,
+  isServiceFallbackImage,
   isValidServiceImageUrl,
   resolveServiceMedia
 } from "../services/service-media-fallback.js";
@@ -387,7 +388,21 @@ export async function createService(req: Request, res: Response) {
       });
     }
 
+    if (inputGallery.some((item) => isServiceFallbackImage(item))) {
+      return res.status(422).json({
+        message: "لا يمكن حفظ صور افتراضية كصور خدمة رئيسية.",
+        code: "SERVICE_FALLBACK_GALLERY_BLOCKED"
+      });
+    }
+
     const rawCoverImage = typeof req.body.coverImage === "string" ? req.body.coverImage.trim() : "";
+    if (rawCoverImage && isServiceFallbackImage(rawCoverImage)) {
+      return res.status(422).json({
+        message: "لا يمكن حفظ صورة غلاف افتراضية.",
+        code: "SERVICE_FALLBACK_COVER_BLOCKED"
+      });
+    }
+
     if (rawCoverImage && !isValidServiceImageUrl(rawCoverImage)) {
       return res.status(422).json({
         message: "رابط صورة الغلاف غير صالح.",
@@ -396,6 +411,13 @@ export async function createService(req: Request, res: Response) {
     }
 
     const rawImageUrl = typeof req.body.imageUrl === "string" ? req.body.imageUrl.trim() : "";
+    if (rawImageUrl && isServiceFallbackImage(rawImageUrl)) {
+      return res.status(422).json({
+        message: "لا يمكن حفظ صورة افتراضية في حقل الصورة.",
+        code: "SERVICE_FALLBACK_IMAGE_BLOCKED"
+      });
+    }
+
     if (rawImageUrl && !isValidServiceImageUrl(rawImageUrl)) {
       return res.status(422).json({
         message: "رابط الصورة غير صالح.",
@@ -525,7 +547,21 @@ export async function updateService(req: Request, res: Response) {
       });
     }
 
+    if (inputGallery.some((item) => isServiceFallbackImage(item))) {
+      return res.status(422).json({
+        message: "لا يمكن حفظ صور افتراضية كصور خدمة رئيسية.",
+        code: "SERVICE_FALLBACK_GALLERY_BLOCKED"
+      });
+    }
+
     const rawCoverImage = typeof req.body.coverImage === "string" ? req.body.coverImage.trim() : "";
+    if (rawCoverImage && isServiceFallbackImage(rawCoverImage)) {
+      return res.status(422).json({
+        message: "لا يمكن حفظ صورة غلاف افتراضية.",
+        code: "SERVICE_FALLBACK_COVER_BLOCKED"
+      });
+    }
+
     if (rawCoverImage && !isValidServiceImageUrl(rawCoverImage)) {
       return res.status(422).json({
         message: "رابط صورة الغلاف غير صالح.",
@@ -534,6 +570,13 @@ export async function updateService(req: Request, res: Response) {
     }
 
     const rawImageUrl = typeof req.body.imageUrl === "string" ? req.body.imageUrl.trim() : "";
+    if (rawImageUrl && isServiceFallbackImage(rawImageUrl)) {
+      return res.status(422).json({
+        message: "لا يمكن حفظ صورة افتراضية في حقل الصورة.",
+        code: "SERVICE_FALLBACK_IMAGE_BLOCKED"
+      });
+    }
+
     if (rawImageUrl && !isValidServiceImageUrl(rawImageUrl)) {
       return res.status(422).json({
         message: "رابط الصورة غير صالح.",

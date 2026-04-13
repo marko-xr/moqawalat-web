@@ -112,6 +112,7 @@ export default async function ServiceDetails({ params }: { params: Promise<{ slu
               width={1280}
               height={853}
               sizes="(max-width: 1024px) 100vw, 50vw"
+              quality={90}
               priority
             />
           </div>
@@ -137,6 +138,8 @@ export default async function ServiceDetails({ params }: { params: Promise<{ slu
                         width={1000}
                         height={750}
                         sizes="(max-width: 768px) 100vw, 50vw"
+                        quality={84}
+                        loading="lazy"
                       />
                     </div>
                     {caption ? (

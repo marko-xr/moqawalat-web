@@ -42,11 +42,15 @@ function isInvalidImageUrl(value: string): boolean {
     return true;
   }
 
-  if (normalized.includes("/uploads/")) {
-    return true;
+  if (normalized.startsWith("/uploads/") || normalized.startsWith("uploads/")) {
+    return false;
   }
 
   if (normalized.startsWith("/images/services/")) {
+    return false;
+  }
+
+  if (normalized.startsWith("http://") || normalized.startsWith("https://")) {
     return false;
   }
 

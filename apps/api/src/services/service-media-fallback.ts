@@ -6,6 +6,8 @@ const SERVICE_DEFAULT_IMAGES = [
   "/images/services/default-05.svg"
 ] as const;
 
+const SERVICE_FALLBACK_PREFIX = "/images/services/default-";
+
 function hashSeed(value: string): number {
   let hash = 0;
   for (let index = 0; index < value.length; index += 1) {
@@ -46,6 +48,14 @@ export function isValidServiceImageUrl(value: unknown): value is string {
   }
 }
 
+export function isServiceFallbackImage(value: unknown): value is string {
+  return typeof value === "string" && value.trim().startsWith(SERVICE_FALLBACK_PREFIX);
+}
+
+export function isRealServiceImageUrl(value: unknown): value is string {
+  return isValidServiceImageUrl(value) && !isServiceFallbackImage(value);
+}
+
 export function getServiceFallbackGallery(seed: string, count = 4): string[] {
   const safeCount = Math.min(5, Math.max(3, count));
   const start = hashSeed(seed || "service") % SERVICE_DEFAULT_IMAGES.length;
@@ -62,7 +72,11 @@ export function resolveServiceMedia<T extends { slug?: string | null; titleAr?: 
 ): T & { coverImage: string; gallery: string[] } {
   const seed = `${service.slug || ""}|${service.titleAr || ""}`;
   const sanitizedGallery = Array.from(
-    new Set((Array.isArray(service.gallery) ? service.gallery : []).map((item) => String(item || "").trim()).filter(isValidServiceImageUrl))
+    new Set(
+      (Array.isArray(service.gallery) ? service.gallery : [])
+        .map((item) => String(item || "").trim())
+        .filter(isRealServiceImageUrl)
+    )
   );
 
   const fallbackGallery = getServiceFallbackGallery(seed, fallbackCount);
@@ -72,7 +86,7 @@ export function resolveServiceMedia<T extends { slug?: string | null; titleAr?: 
     (typeof service.coverImage === "string" ? service.coverImage.trim() : "") ||
     (typeof service.imageUrl === "string" ? service.imageUrl.trim() : "");
 
-  const coverImage = isValidServiceImageUrl(coverCandidate) ? coverCandidate : gallery[0];
+  const coverImage = isRealServiceImageUrl(coverCandidate) ? coverCandidate : gallery[0];
 
   return {
     ...service,

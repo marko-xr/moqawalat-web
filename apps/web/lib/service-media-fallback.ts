@@ -8,6 +8,12 @@ const SERVICE_DEFAULT_IMAGES = [
   "/images/services/default-05.svg"
 ] as const;
 
+const SERVICE_FALLBACK_PREFIX = "/images/services/default-";
+
+function isServiceFallbackImage(value: string): boolean {
+  return value.trim().startsWith(SERVICE_FALLBACK_PREFIX);
+}
+
 function hashSeed(value: string): number {
   let hash = 0;
 
@@ -36,7 +42,11 @@ export function resolveServiceMedia<T extends { slug?: string | null; titleAr?: 
   const seed = `${service.slug || ""}|${service.titleAr || ""}`;
 
   const sanitizedGallery = Array.from(
-    new Set((Array.isArray(service.gallery) ? service.gallery : []).map((item) => String(item || "").trim()).filter((item) => isValidImageUrl(item, { allowPlaceholders: false })))
+    new Set(
+      (Array.isArray(service.gallery) ? service.gallery : [])
+        .map((item) => String(item || "").trim())
+        .filter((item) => isValidImageUrl(item, { allowPlaceholders: false }) && !isServiceFallbackImage(item))
+    )
   );
 
   const fallbackGallery = getServiceFallbackGallery(seed, fallbackCount);
@@ -46,7 +56,10 @@ export function resolveServiceMedia<T extends { slug?: string | null; titleAr?: 
     (typeof service.coverImage === "string" ? service.coverImage.trim() : "") ||
     (typeof service.imageUrl === "string" ? service.imageUrl.trim() : "");
 
-  const coverImage = isValidImageUrl(coverCandidate, { allowPlaceholders: false }) ? coverCandidate : gallery[0];
+  const coverImage =
+    isValidImageUrl(coverCandidate, { allowPlaceholders: false }) && !isServiceFallbackImage(coverCandidate)
+      ? coverCandidate
+      : gallery[0];
 
   return {
     ...service,

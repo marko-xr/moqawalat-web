@@ -13,7 +13,8 @@
     "prisma:migrate": "prisma migrate dev",
     "prisma:seed": "tsx prisma/seed.ts",
     "cleanup:images": "tsx scripts/cleanupBrokenImages.ts",
-    "repair:service-images": "tsx scripts/repairServiceImages.ts"
+    "repair:service-images": "tsx scripts/repairServiceImages.ts",
+    "replace:service-fallback-images": "tsx scripts/replaceServiceFallbackImages.ts"
   },
   "prisma": {
     "seed": "tsx prisma/seed.ts"

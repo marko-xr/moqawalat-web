@@ -1,4 +1,5 @@
 const cloudinarySecureUrlPattern = /^https:\/\/res\.cloudinary\.com\/.+/i;
+const imageExtensionPattern = /\.(jpg|jpeg|png|webp|avif|gif)$/i;
 
 function flattenStringLike(value: unknown): string[] {
   if (value === undefined || value === null) {
@@ -86,12 +87,75 @@ function extractCloudinaryUrl(file: Express.Multer.File): string {
   return normalized;
 }
 
+async function optimizeLocalUpload(file: Express.Multer.File): Promise<string> {
+  const absolutePath = String(file.path || "").trim();
+  const filename = String(file.filename || "").trim();
+
+  if (!absolutePath && !filename) {
+    throw new Error("Upload failed: local file path is missing.");
+  }
+
+  const sourcePath = absolutePath;
+  const sourceFileName = filename || sourcePath.split(/[\\/]/).pop() || "";
+  const sourceExtension = sourceFileName.split(".").pop()?.toLowerCase() || "";
+
+  if (!sourcePath || sourcePath.startsWith("http://") || sourcePath.startsWith("https://")) {
+    return `/uploads/${sourceFileName}`;
+  }
+
+  if (sourceExtension === "webp") {
+    return `/uploads/${sourceFileName}`;
+  }
+
+  if (!imageExtensionPattern.test(sourceFileName)) {
+    return `/uploads/${sourceFileName}`;
+  }
+
+  const path = await import("node:path");
+  const fs = await import("node:fs/promises");
+  const { default: sharp } = await import("sharp");
+
+  const parsed = path.parse(sourcePath);
+  const outputName = `${parsed.name}.webp`;
+  const outputPath = path.join(parsed.dir, outputName);
+
+  await sharp(sourcePath)
+    .rotate()
+    .resize({ width: 2048, withoutEnlargement: true })
+    .webp({ quality: 86, effort: 5 })
+    .toFile(outputPath);
+
+  await fs.unlink(sourcePath).catch(() => undefined);
+
+  return `/uploads/${outputName}`;
+}
+
+async function extractUploadedUrl(file: Express.Multer.File): Promise<string> {
+  const cloudinaryCandidate =
+    (file as Express.Multer.File & { secure_url?: string; url?: string }).secure_url ||
+    (file as Express.Multer.File & { secure_url?: string; url?: string }).url;
+
+  if (typeof cloudinaryCandidate === "string" && cloudinaryCandidate.trim()) {
+    const normalized = cloudinaryCandidate.trim();
+
+    if (cloudinarySecureUrlPattern.test(normalized)) {
+      return normalized;
+    }
+
+    if (normalized.startsWith("http://") || normalized.startsWith("https://")) {
+      return normalized;
+    }
+  }
+
+  return optimizeLocalUpload(file);
+}
+
 export async function uploadMediaFile(file: Express.Multer.File | undefined, _folder: string): Promise<string | undefined> {
   if (!file) {
     return undefined;
   }
 
-  return extractCloudinaryUrl(file);
+  return extractUploadedUrl(file);
 }
 
 export async function uploadMediaFiles(files: Express.Multer.File[] | undefined, folder: string): Promise<string[]> {
