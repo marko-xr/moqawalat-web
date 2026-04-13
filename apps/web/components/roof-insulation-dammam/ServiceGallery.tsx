@@ -1,34 +1,22 @@
 import Image from "next/image";
+import { sanitizeImageList } from "@/lib/media";
 
 type ServiceGalleryProps = {
   title?: string;
   images?: string[];
-  fallbackImage?: string;
   altPrefix?: string;
 };
-
-function sanitizeImages(value: unknown): string[] {
-  if (!Array.isArray(value)) {
-    return [];
-  }
-
-  return Array.from(
-    new Set(
-      value
-        .map((item) => String(item || "").trim())
-        .filter(Boolean)
-    )
-  );
-}
 
 export default function ServiceGallery({
   title = "معرض صور الخدمة",
   images = [],
-  fallbackImage = "/images/placeholder-after.svg",
   altPrefix = "صورة خدمة"
 }: ServiceGalleryProps) {
-  const normalizedImages = sanitizeImages(images);
-  const galleryImages = normalizedImages.length > 0 ? normalizedImages : [fallbackImage];
+  const galleryImages = sanitizeImageList(images, { allowPlaceholders: false });
+
+  if (galleryImages.length === 0) {
+    return null;
+  }
 
   return (
     <section className="service-gallery-wrap" aria-label={title}>
@@ -45,9 +33,6 @@ export default function ServiceGallery({
                 sizes="(max-width: 768px) 100vw, 50vw"
               />
             </div>
-            <figcaption className="service-gallery-caption">
-              <span className="service-gallery-caption-index">الصورة {index + 1}</span>
-            </figcaption>
           </figure>
         ))}
       </div>

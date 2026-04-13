@@ -5,6 +5,7 @@ import Services from "@/components/roof-insulation-dammam/Services";
 import FAQ from "@/components/roof-insulation-dammam/FAQ";
 import CTA from "@/components/roof-insulation-dammam/CTA";
 import { getServiceSeoPageByServiceSlug, getServiceSeoPageBySlug } from "@/lib/api";
+import { pickFirstImage, sanitizeImageList } from "@/lib/media";
 import { getSiteUrl } from "@/lib/site-url";
 
 export const revalidate = 300;
@@ -82,7 +83,7 @@ const defaultModel: RoofPageModel = {
       imageAlt: "عزل اسطح فوم في الدمام"
     }
   ],
-  serviceImage: "/images/placeholder-after.svg",
+  serviceImage: "",
   serviceImages: [],
   areas: ["الدمام", "الخبر", "الظهران", "القطيف"],
   relatedLinks: [
@@ -256,12 +257,26 @@ function buildModel(source: Awaited<ReturnType<typeof getSeoSource>>): RoofPageM
   const relatedLinks = toRelatedLinks((sections as { relatedLinks?: unknown }).relatedLinks);
   const faqItems = toFaqItems(source.faq);
 
-  const heroImage =
-    toString((sections as { heroImage?: unknown }).heroImage) ||
-    source.images?.[0] ||
-    defaultModel.heroImage;
   const beforeImage = toString((sections as { beforeImage?: unknown }).beforeImage);
   const afterImage = toString((sections as { afterImage?: unknown }).afterImage);
+  const sectionImages = sanitizeImageList(
+    [
+      ...(Array.isArray(source.images) ? source.images : []),
+      beforeImage,
+      afterImage
+    ],
+    { allowPlaceholders: false }
+  );
+  const heroImage =
+    pickFirstImage(
+      [
+        toString((sections as { heroImage?: unknown }).heroImage),
+        ...(Array.isArray(source.images) ? source.images : []),
+        beforeImage,
+        afterImage
+      ],
+      { allowPlaceholders: false }
+    ) || defaultModel.heroImage;
 
   return {
     pageTitle: toString(source.title) || defaultModel.pageTitle,
@@ -276,16 +291,8 @@ function buildModel(source: Awaited<ReturnType<typeof getSeoSource>>): RoofPageM
     serviceHeading: defaultModel.serviceHeading,
     serviceIntro: toString((sections as { serviceIntro?: unknown }).serviceIntro) || defaultModel.serviceIntro,
     serviceItems: serviceItems.length ? serviceItems : defaultModel.serviceItems,
-    serviceImage: afterImage || beforeImage || heroImage || defaultModel.serviceImage,
-    serviceImages: Array.from(
-      new Set(
-        [
-          ...(Array.isArray(source.images) ? source.images.filter(Boolean) : defaultModel.serviceImages),
-          beforeImage,
-          afterImage
-        ].filter(Boolean)
-      )
-    ),
+    serviceImage: sectionImages[0] || "",
+    serviceImages: sectionImages,
     areas: areas.length ? areas : defaultModel.areas,
     relatedLinks: relatedLinks.length ? relatedLinks : defaultModel.relatedLinks,
     ctaTopTitle: toString((sections as { ctaTopTitle?: unknown }).ctaTopTitle) || defaultModel.ctaTopTitle,

@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { useCallback, useEffect, useMemo, useState } from "react";
+import { sanitizeImageList } from "@/lib/media";
 import type {
   Service,
   ServiceSeoAdminPayload,
@@ -68,46 +69,6 @@ function asStringArray(value: unknown) {
   }
 
   return value.map((item) => String(item || "").trim()).filter(Boolean);
-}
-
-function normalizeMediaList(value: unknown): string[] {
-  if (value === undefined || value === null) {
-    return [];
-  }
-
-  const flatten = (input: unknown): string[] => {
-    if (input === undefined || input === null) {
-      return [];
-    }
-
-    if (Array.isArray(input)) {
-      return input.flatMap((item) => flatten(item));
-    }
-
-    const trimmed = String(input).trim();
-    if (!trimmed) {
-      return [];
-    }
-
-    try {
-      const parsed = JSON.parse(trimmed);
-
-      if (Array.isArray(parsed)) {
-        return parsed.flatMap((item) => flatten(item));
-      }
-
-      if (typeof parsed === "string") {
-        const normalized = parsed.trim();
-        return normalized ? [normalized] : [];
-      }
-    } catch {
-      // Not JSON, keep value.
-    }
-
-    return [trimmed];
-  };
-
-  return Array.from(new Set(flatten(value).filter(Boolean)));
 }
 
 function normalizeTrustItems(value: unknown): ServiceSeoTrustItem[] {
@@ -249,7 +210,7 @@ function buildForm(payload: ServiceSeoAdminPayload): SeoFormState {
     heroImage: asString(sections.heroImage),
     beforeImage: asString(sections.beforeImage),
     afterImage: asString(sections.afterImage),
-    images: normalizeMediaList(payload.seoPage.images),
+    images: sanitizeImageList(payload.seoPage.images, { allowPlaceholders: false }),
     faq: normalizeFaq(payload.seoPage.faq)
   };
 }

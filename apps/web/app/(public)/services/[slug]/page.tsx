@@ -3,48 +3,9 @@ import { getServiceBySlug, getServices } from "@/lib/api";
 import { notFound } from "next/navigation";
 import Image from "next/image";
 import { getSiteUrl } from "@/lib/site-url";
+import { pickFirstImage, sanitizeImageList } from "@/lib/media";
 
 export const revalidate = 300;
-
-function normalizeImageList(value: unknown): string[] {
-  if (value === undefined || value === null) {
-    return [];
-  }
-
-  const flatten = (input: unknown): string[] => {
-    if (input === undefined || input === null) {
-      return [];
-    }
-
-    if (Array.isArray(input)) {
-      return input.flatMap((item) => flatten(item));
-    }
-
-    const trimmed = String(input).trim();
-    if (!trimmed) {
-      return [];
-    }
-
-    try {
-      const parsed = JSON.parse(trimmed);
-
-      if (Array.isArray(parsed)) {
-        return parsed.flatMap((item) => flatten(item));
-      }
-
-      if (typeof parsed === "string") {
-        const normalized = parsed.trim();
-        return normalized ? [normalized] : [];
-      }
-    } catch {
-      // Not JSON, keep raw token.
-    }
-
-    return [trimmed];
-  };
-
-  return Array.from(new Set(flatten(value).filter(Boolean)));
-}
 
 export async function generateStaticParams() {
   const services = await getServices();
@@ -77,10 +38,20 @@ export default async function ServiceDetails({ params }: { params: Promise<{ slu
     notFound();
   }
 
-  const cover = service.coverImage || service.imageUrl || "/images/placeholder-before.svg";
-  const gallery: string[] = normalizeImageList(service.gallery);
+  const gallery: string[] = sanitizeImageList(service.gallery, { allowPlaceholders: false });
+  const cover =
+    pickFirstImage([service.coverImage, service.imageUrl], { allowPlaceholders: false }) ||
+    "/images/placeholder-before.svg";
   const galleryDescriptions: string[] = Array.isArray(service.galleryDescriptions) ? service.galleryDescriptions : [];
   const videoUrl = service.videoUrl || "";
+
+  if (process.env.NODE_ENV !== "production") {
+    console.log("[service-page]", service.slug, {
+      coverImage: cover,
+      galleryCount: gallery.length,
+      rawGalleryType: Array.isArray(service.gallery) ? "array" : typeof service.gallery
+    });
+  }
 
   const phone = process.env.NEXT_PUBLIC_PHONE_NUMBER || "966556741880";
   const baseUrl = getSiteUrl();
@@ -161,16 +132,17 @@ export default async function ServiceDetails({ params }: { params: Promise<{ slu
                     <div className="service-gallery-media">
                       <Image
                         src={src}
-                        alt={caption || `${service.titleAr} – صورة ${index + 1}`}
+                        alt={caption || `${service.titleAr} - صورة خدمة`}
                         width={1000}
                         height={750}
                         sizes="(max-width: 768px) 100vw, 50vw"
                       />
                     </div>
-                    <figcaption className="service-gallery-caption">
-                      <span className="service-gallery-caption-index">الصورة {index + 1}</span>
-                      {caption ? <p className="service-gallery-caption-text">{caption}</p> : null}
-                    </figcaption>
+                    {caption ? (
+                      <figcaption className="service-gallery-caption">
+                        <p className="service-gallery-caption-text">{caption}</p>
+                      </figcaption>
+                    ) : null}
                   </figure>
                 );
               })}

@@ -79,13 +79,27 @@ function normalizeFaq(items: unknown): FaqItem[] {
 }
 
 function normalizeMediaList(items: unknown): string[] {
-  if (!Array.isArray(items)) {
-    return [];
-  }
-
-  return items
+  const values = parseGallery(items)
     .map((item) => String(item || "").trim())
     .filter(Boolean);
+
+  return Array.from(new Set(values.filter((item) => isValidImageUrl(item))));
+}
+
+function isValidImageUrl(value: string) {
+  if (!value) {
+    return false;
+  }
+
+  if (value.startsWith("data:image/")) {
+    return true;
+  }
+
+  if (value.startsWith("/uploads/") || value.startsWith("uploads/") || value.startsWith("http://") || value.startsWith("https://")) {
+    return true;
+  }
+
+  return false;
 }
 
 function isPlaceholderImage(value: string) {
@@ -182,7 +196,7 @@ function defaultContentSections(service: {
     ctaTopDescription: "اتصل الآن لتحديد أفضل حل عزل لسطح المبنى.",
     ctaBottomTitle: "جاهز لبدء التنفيذ؟",
     ctaBottomDescription: "تواصل معنا الآن عبر الاتصال أو الواتساب.",
-    heroImage: service.coverImage || service.gallery[0] || null,
+    heroImage: normalizeMediaList([service.coverImage, service.gallery[0]])[0] || null,
     beforeImage: null,
     afterImage: null
   };
@@ -233,7 +247,7 @@ function mapServiceSeo(service: {
     metaTitle: service.seoTitleAr || service.titleAr,
     metaDescription: service.seoDescriptionAr || service.shortDescAr,
     contentSections: defaultContentSections(service),
-    images: service.gallery || [],
+    images: normalizeMediaList(service.gallery),
     faq: defaultFaq(service.titleAr),
     updatedAt: service.updatedAt
   };
@@ -473,7 +487,7 @@ export async function upsertServiceSeoByServiceIdAdmin(req: Request, res: Respon
 
     const parsedSections = safeJsonParse<ContentSections>(req.body.contentSections, {} as ContentSections);
     const parsedFaq = normalizeFaq(safeJsonParse<unknown[]>(req.body.faq, []));
-    const existingImages = parseGallery(req.body.images);
+    const existingImages = normalizeMediaList(req.body.images);
 
     const files = req.files as Record<string, Express.Multer.File[]> | undefined;
     const heroImageFile = files?.heroImage?.[0];
@@ -518,13 +532,7 @@ export async function upsertServiceSeoByServiceIdAdmin(req: Request, res: Respon
       nextSections.afterImage = uploadedAfterImage;
     }
 
-    const nextImages = Array.from(
-      new Set(
-        [...existingImages, ...uploadedGalleryImages]
-          .map((item) => String(item || "").trim())
-          .filter(Boolean)
-      )
-    );
+    const nextImages = normalizeMediaList([...existingImages, ...uploadedGalleryImages]);
 
     const [updatedService, seoPage] = await prisma.$transaction([
       prisma.service.update({

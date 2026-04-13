@@ -62,6 +62,33 @@ function parseSortOrder(value: unknown): number | undefined {
   return Math.floor(parsed);
 }
 
+function isValidImageUrl(value: string) {
+  if (!value) {
+    return false;
+  }
+
+  if (value.startsWith("data:image/")) {
+    return true;
+  }
+
+  if (value.startsWith("/uploads/") || value.startsWith("uploads/")) {
+    return true;
+  }
+
+  try {
+    const parsed = new URL(value);
+    return parsed.protocol === "http:" || parsed.protocol === "https:";
+  } catch {
+    return false;
+  }
+}
+
+function sanitizeGalleryInput(value: unknown) {
+  return parseGallery(value)
+    .map((item) => String(item || "").trim())
+    .filter((item) => isValidImageUrl(item));
+}
+
 const SERVICE_SELECT_LEGACY = {
   id: true,
   titleAr: true,
@@ -361,9 +388,7 @@ export async function createService(req: Request, res: Response) {
     const uploadedGallery = await uploadMediaFiles(galleryFiles, "moqawalat/services");
     const uploadedVideo = await uploadMediaFile(videoFile, "moqawalat/services");
 
-    const gallery = [...parseGallery(req.body.gallery), ...uploadedGallery]
-      .map((item) => String(item || "").trim())
-      .filter(Boolean);
+    const gallery = sanitizeGalleryInput([...parseGallery(req.body.gallery), ...uploadedGallery]);
     const existingDescriptions = normalizeDescriptions(parseGallery(req.body.galleryDescriptions), parseGallery(req.body.gallery).length);
     const newDescriptions = normalizeDescriptions(parseGallery(req.body.newGalleryDescriptions), uploadedGallery.length);
     const galleryDescriptions = [...existingDescriptions, ...newDescriptions];
@@ -394,7 +419,11 @@ export async function createService(req: Request, res: Response) {
       seoTitleAr: req.body.seoTitleAr || null,
       seoDescriptionAr: req.body.seoDescriptionAr || null,
       imageUrl: req.body.imageUrl || null,
-      coverImage: coverImage || req.body.coverImage || null,
+      coverImage:
+        coverImage ||
+        (typeof req.body.coverImage === "string" && isValidImageUrl(req.body.coverImage.trim())
+          ? req.body.coverImage.trim()
+          : null),
       gallery,
       galleryDescriptions,
       videoUrl: uploadedVideo || req.body.videoUrl || null,
@@ -451,9 +480,7 @@ export async function updateService(req: Request, res: Response) {
     const uploadedVideo = await uploadMediaFile(videoFile, "moqawalat/services");
 
     const existingGallery = parseGallery(req.body.gallery);
-    const gallery = [...existingGallery, ...uploadedGallery]
-      .map((item) => String(item || "").trim())
-      .filter(Boolean);
+    const gallery = sanitizeGalleryInput([...existingGallery, ...uploadedGallery]);
     const existingDescriptions = normalizeDescriptions(parseGallery(req.body.galleryDescriptions), existingGallery.length);
     const newDescriptions = normalizeDescriptions(parseGallery(req.body.newGalleryDescriptions), uploadedGallery.length);
     const galleryDescriptions = [...existingDescriptions, ...newDescriptions];
@@ -465,7 +492,10 @@ export async function updateService(req: Request, res: Response) {
     const imageUrl = typeof req.body.imageUrl === "string" && req.body.imageUrl.length > 0 ? req.body.imageUrl : undefined;
     const coverValue = removeCoverImage
       ? null
-      : coverImage || (typeof req.body.coverImage === "string" ? req.body.coverImage.trim() || null : undefined);
+      : coverImage ||
+        (typeof req.body.coverImage === "string" && isValidImageUrl(req.body.coverImage.trim())
+          ? req.body.coverImage.trim() || null
+          : undefined);
     const videoValue = removeVideo
       ? null
       : uploadedVideo || (typeof req.body.videoUrl === "string" ? req.body.videoUrl.trim() || null : undefined);

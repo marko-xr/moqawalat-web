@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { useCallback, useEffect, useMemo, useState } from "react";
+import { sanitizeImageList } from "@/lib/media";
 import ConfirmDeleteModal from "./ConfirmDeleteModal";
 import type { Service } from "@/lib/types";
 
@@ -50,46 +51,6 @@ function toSlug(value: string) {
     .replace(/[^a-z0-9-]/g, "")
     .replace(/-+/g, "-")
     .replace(/^-+|-+$/g, "");
-}
-
-function normalizeMediaList(value: unknown): string[] {
-  if (value === undefined || value === null) {
-    return [];
-  }
-
-  const flatten = (input: unknown): string[] => {
-    if (input === undefined || input === null) {
-      return [];
-    }
-
-    if (Array.isArray(input)) {
-      return input.flatMap((item) => flatten(item));
-    }
-
-    const trimmed = String(input).trim();
-    if (!trimmed) {
-      return [];
-    }
-
-    try {
-      const parsed = JSON.parse(trimmed);
-
-      if (Array.isArray(parsed)) {
-        return parsed.flatMap((item) => flatten(item));
-      }
-
-      if (typeof parsed === "string") {
-        const normalized = parsed.trim();
-        return normalized ? [normalized] : [];
-      }
-    } catch {
-      // Not JSON, keep the value as-is.
-    }
-
-    return [trimmed];
-  };
-
-  return Array.from(new Set(flatten(value).filter(Boolean)));
 }
 
 function formatDate(value?: string) {
@@ -402,7 +363,7 @@ export default function AdminServicesPage() {
   }
 
   function handleEdit(item: Service) {
-    const normalizedGallery = normalizeMediaList(item.gallery);
+    const normalizedGallery = sanitizeImageList(item.gallery, { allowPlaceholders: true });
     const existingDescriptions = Array.isArray(item.galleryDescriptions)
       ? item.galleryDescriptions.map((entry) => String(entry || ""))
       : [];

@@ -1,5 +1,6 @@
 import Image from "next/image";
 import ServiceGallery from "./ServiceGallery";
+import { sanitizeImageList } from "@/lib/media";
 
 type ServiceItem = {
   title: string;
@@ -37,43 +38,46 @@ export default function Services({
   heading = "تفاصيل خدمة عزل الأسطح",
   intro = "نختار نوع العزل بعد فحص السطح وحالته الحالية، لضمان أفضل نتيجة حسب طبيعة المبنى والميزانية.",
   items = defaultServiceItems,
-  imageSrc = "/images/placeholder-after.svg",
+  imageSrc = "",
   imageSources = []
 }: ServicesProps) {
-  const normalizedSources = Array.from(
-    new Set(
-      imageSources
-        .map((item) => String(item || "").trim())
-        .filter(Boolean)
-    )
+  const normalizedSources = sanitizeImageList(
+    [...imageSources, imageSrc],
+    { allowPlaceholders: false }
   );
-  const fallbackImage = String(imageSrc || "").trim() || "/images/placeholder-after.svg";
+  const hasSectionImages = normalizedSources.length > 0;
 
   return (
     <section className="roof-services" aria-labelledby="roof-services-heading">
       <h2 id="roof-services-heading">{heading}</h2>
       <p className="roof-section-intro">{intro}</p>
 
-      <div className="roof-services-grid">
-        {items.map((item, index) => (
-          <article key={`${item.title}-${index}`} className="card roof-service-card">
-            <div className="roof-service-image">
-              <Image
-                src={normalizedSources[index] || normalizedSources[index % Math.max(normalizedSources.length, 1)] || fallbackImage}
-                alt={item.imageAlt}
-                width={1000}
-                height={700}
-                sizes="(max-width: 768px) 100vw, 33vw"
-                loading={index === 0 ? "eager" : "lazy"}
-              />
-            </div>
-            <h3>{item.title}</h3>
-            <p>{item.description}</p>
-          </article>
-        ))}
-      </div>
+      {hasSectionImages ? (
+        <div className="roof-services-grid">
+          {items.map((item, index) => {
+            const src = normalizedSources[index % normalizedSources.length];
 
-      <ServiceGallery images={normalizedSources} fallbackImage={fallbackImage} altPrefix={heading} />
+            return (
+              <article key={`${item.title}-${index}`} className="card roof-service-card">
+                <div className="roof-service-image">
+                  <Image
+                    src={src}
+                    alt={item.imageAlt}
+                    width={1000}
+                    height={700}
+                    sizes="(max-width: 768px) 100vw, 33vw"
+                    loading={index === 0 ? "eager" : "lazy"}
+                  />
+                </div>
+                <h3>{item.title}</h3>
+                <p>{item.description}</p>
+              </article>
+            );
+          })}
+        </div>
+      ) : null}
+
+      <ServiceGallery images={normalizedSources} altPrefix={heading} />
     </section>
   );
 }

@@ -1,5 +1,6 @@
 import { cookies } from "next/headers";
 import { NextResponse } from "next/server";
+import { isValidImageUrl, sanitizeImageList } from "@/lib/media";
 
 const API_URL = process.env.API_URL || process.env.NEXT_PUBLIC_API_URL || "http://localhost:4000/api";
 const API_ORIGIN = API_URL.replace(/\/api\/?$/, "");
@@ -73,43 +74,11 @@ function normalizeMediaUrl(value?: string | null) {
 }
 
 function normalizeMediaList(value: unknown): string[] {
-  if (value === undefined || value === null) {
-    return [];
-  }
+  const normalized = sanitizeImageList(value, { allowPlaceholders: true })
+    .map((item) => normalizeMediaUrl(item) || item)
+    .filter((item): item is string => isValidImageUrl(item, { allowPlaceholders: true }));
 
-  const flatten = (input: unknown): string[] => {
-    if (input === undefined || input === null) {
-      return [];
-    }
-
-    if (Array.isArray(input)) {
-      return input.flatMap((item) => flatten(item));
-    }
-
-    const trimmed = String(input).trim();
-    if (!trimmed) {
-      return [];
-    }
-
-    try {
-      const parsed = JSON.parse(trimmed);
-
-      if (Array.isArray(parsed)) {
-        return parsed.flatMap((item) => flatten(item));
-      }
-
-      if (typeof parsed === "string") {
-        const normalized = parsed.trim();
-        return normalized ? [normalized] : [];
-      }
-    } catch {
-      // Not JSON, keep value.
-    }
-
-    return [trimmed];
-  };
-
-  return Array.from(new Set(flatten(value).map((item) => normalizeMediaUrl(item) || item).filter(Boolean)));
+  return Array.from(new Set(normalized));
 }
 
 function filterItems(items: Array<{ titleAr?: string; slug?: string; shortDescAr?: string; isPublished?: boolean }>, q: string, published: string) {

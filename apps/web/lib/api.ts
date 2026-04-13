@@ -1,4 +1,5 @@
 import type { ServiceSeoPage } from "@/lib/types";
+import { isValidImageUrl, pickFirstImage, sanitizeImageList } from "@/lib/media";
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:4000/api";
 const REQUEST_TIMEOUT_MS = 8000;
@@ -79,43 +80,11 @@ function normalizeMediaUrl(value?: string | null) {
 }
 
 function normalizeMediaList(value: unknown): string[] {
-  if (value === undefined || value === null) {
-    return [];
-  }
+  const normalized = sanitizeImageList(value, { allowPlaceholders: true })
+    .map((item) => normalizeMediaUrl(item) || item)
+    .filter((item): item is string => isValidImageUrl(item, { allowPlaceholders: true }));
 
-  const flatten = (input: unknown): string[] => {
-    if (input === undefined || input === null) {
-      return [];
-    }
-
-    if (Array.isArray(input)) {
-      return input.flatMap((item) => flatten(item));
-    }
-
-    const trimmed = String(input).trim();
-    if (!trimmed) {
-      return [];
-    }
-
-    try {
-      const parsed = JSON.parse(trimmed);
-
-      if (Array.isArray(parsed)) {
-        return parsed.flatMap((item) => flatten(item));
-      }
-
-      if (typeof parsed === "string") {
-        const normalized = parsed.trim();
-        return normalized ? [normalized] : [];
-      }
-    } catch {
-      // Not JSON, keep the raw string value.
-    }
-
-    return [trimmed];
-  };
-
-  return Array.from(new Set(flatten(value).map((item) => normalizeMediaUrl(item) || item).filter(Boolean)));
+  return Array.from(new Set(normalized));
 }
 
 function normalizeService(service: any) {
@@ -152,9 +121,9 @@ function normalizeServiceSeoPage(page: any): ServiceSeoPage {
     images: normalizeMediaList(page?.images),
     contentSections: {
       ...contentSections,
-      heroImage: normalizeMediaUrl(contentSections?.heroImage),
-      beforeImage: normalizeMediaUrl(contentSections?.beforeImage),
-      afterImage: normalizeMediaUrl(contentSections?.afterImage)
+      heroImage: pickFirstImage(normalizeMediaUrl(contentSections?.heroImage), { allowPlaceholders: false }),
+      beforeImage: pickFirstImage(normalizeMediaUrl(contentSections?.beforeImage), { allowPlaceholders: false }),
+      afterImage: pickFirstImage(normalizeMediaUrl(contentSections?.afterImage), { allowPlaceholders: false })
     }
   };
 }
@@ -211,10 +180,28 @@ export async function getServices() {
 export async function getServiceBySlug(slug: string) {
   try {
     const service = await request<any>(`/services/${slug}`);
-    return normalizeService(service);
+    const normalized = normalizeService(service);
+
+    if (process.env.NODE_ENV !== "production") {
+      console.log("[service] by-slug", slug, {
+        coverImage: normalized?.coverImage || normalized?.imageUrl || null,
+        galleryCount: Array.isArray(normalized?.gallery) ? normalized.gallery.length : 0
+      });
+    }
+
+    return normalized;
   } catch {
     const fallback = DEFAULT_SERVICES_FALLBACK.find((service) => service.slug === slug);
-    return fallback ? normalizeService(fallback) : null;
+    const normalized = fallback ? normalizeService(fallback) : null;
+
+    if (process.env.NODE_ENV !== "production") {
+      console.log("[service] by-slug fallback", slug, {
+        coverImage: normalized?.coverImage || normalized?.imageUrl || null,
+        galleryCount: Array.isArray(normalized?.gallery) ? normalized.gallery.length : 0
+      });
+    }
+
+    return normalized;
   }
 }
 
