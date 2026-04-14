@@ -60,6 +60,11 @@ function formatDate(value?: string) {
   return new Date(value).toLocaleDateString("ar-SA");
 }
 
+function hasRealImage(item: Service): boolean {
+  const cover = item.coverImage || item.imageUrl || "";
+  return /^https?:\/\//.test(cover);
+}
+
 type ApiValidationError = {
   msg?: string;
   path?: string;
@@ -540,6 +545,20 @@ export default function AdminServicesPage() {
       {notice ? <section className="card admin-notice-box">{notice}</section> : null}
       {error ? <section className="card admin-error-box">{error}</section> : null}
 
+      {!loading && items.some((item) => !hasRealImage(item)) ? (
+        <section className="card admin-error-box">
+          <strong>⚠ تحذير: {items.filter((item) => !hasRealImage(item)).length} خدمة بدون صورة حقيقية</strong>
+          <p style={{ marginTop: "0.4rem", marginBottom: 0 }}>
+            الخدمات التالية تعرض صورة بديلة للزوار:{" "}
+            {items
+              .filter((item) => !hasRealImage(item))
+              .map((item) => item.titleAr)
+              .join(" | ")}.
+            {" "}اضغط تعديل لرفع صورة حقيقية.
+          </p>
+        </section>
+      ) : null}
+
       <section className="card admin-form">
         <div className="admin-form-header">
           <h3>{form.id ? "تحديث خدمة" : "إضافة خدمة جديدة"}</h3>
@@ -833,6 +852,9 @@ export default function AdminServicesPage() {
                   <td>
                     <strong>{item.titleAr}</strong>
                     <div className="admin-meta">{item.slug}</div>
+                    {!hasRealImage(item) ? (
+                      <div className="admin-meta" style={{ color: "#c0392b", fontWeight: 600 }}>⚠ بلا صورة</div>
+                    ) : null}
                   </td>
                   <td>{typeof item.sortOrder === "number" ? item.sortOrder : "-"}</td>
                   <td>{item.isPublished ? "منشور" : "غير منشور"}</td>

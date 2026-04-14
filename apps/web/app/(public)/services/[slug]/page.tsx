@@ -1,11 +1,11 @@
 import type { Metadata } from "next";
 import { getServiceBySlug, getServices } from "@/lib/api";
 import { notFound } from "next/navigation";
-import Image from "next/image";
 import { getSiteUrl } from "@/lib/site-url";
 import { pickFirstImage, sanitizeImageList } from "@/lib/media";
 import { resolveServiceMedia } from "@/lib/service-media-fallback";
 import ServiceImageDebugPanel from "@/components/dev/ServiceImageDebugPanel";
+import ClientImage from "@/components/ClientImage";
 
 export const revalidate = 300;
 
@@ -122,7 +122,7 @@ export default async function ServiceDetails({ params }: { params: Promise<{ slu
             <p className="lead">{service.shortDescAr}</p>
           </div>
           <div className="service-hero-media">
-            <Image
+            <ClientImage
               src={cover}
               alt={service.titleAr}
               width={1280}
@@ -130,6 +130,8 @@ export default async function ServiceDetails({ params }: { params: Promise<{ slu
               sizes="(max-width: 1024px) 100vw, 50vw"
               quality={90}
               priority
+              fallbackSrc="/images/services/default-01.svg"
+              errorContext={`service-hero:${service.slug}`}
             />
           </div>
         </div>
@@ -148,7 +150,7 @@ export default async function ServiceDetails({ params }: { params: Promise<{ slu
                 return (
                   <figure className="service-gallery-item" key={`${src}-${index}`}>
                     <div className="service-gallery-media">
-                      <Image
+                      <ClientImage
                         src={src}
                         alt={caption || `${service.titleAr} - صورة خدمة`}
                         width={1000}
@@ -156,6 +158,8 @@ export default async function ServiceDetails({ params }: { params: Promise<{ slu
                         sizes="(max-width: 768px) 100vw, 50vw"
                         quality={84}
                         loading="lazy"
+                        fallbackSrc="/images/services/default-01.svg"
+                        errorContext={`service-gallery:${service.slug}`}
                       />
                     </div>
                     {caption ? (

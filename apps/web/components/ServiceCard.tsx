@@ -1,7 +1,7 @@
 import Link from "next/link";
-import Image from "next/image";
 import type { Service } from "@/lib/types";
 import { resolveServiceMedia } from "@/lib/service-media-fallback";
+import ClientImage from "@/components/ClientImage";
 
 export default function ServiceCard({ service }: { service: Service }) {
   const media = resolveServiceMedia(service);
@@ -10,7 +10,7 @@ export default function ServiceCard({ service }: { service: Service }) {
   return (
     <article className="card service-card">
       <div className="service-card-media">
-        <Image
+        <ClientImage
           src={cover}
           alt={service.titleAr}
           width={800}
@@ -18,6 +18,8 @@ export default function ServiceCard({ service }: { service: Service }) {
           sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw"
           quality={82}
           loading="lazy"
+          fallbackSrc="/images/services/default-01.svg"
+          errorContext={`service-card:${service.slug}`}
         />
       </div>
       <h3>{service.titleAr}</h3>
