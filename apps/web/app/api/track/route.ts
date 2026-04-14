@@ -1,6 +1,17 @@
 import { NextResponse } from "next/server";
 
-const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:4000/api";
+function resolveApiBaseUrl() {
+  const raw = (process.env.API_URL || process.env.NEXT_PUBLIC_API_URL || "http://localhost:4000/api").trim();
+  const withoutTrailingSlash = raw.replace(/\/+$/, "");
+
+  if (/\/api$/i.test(withoutTrailingSlash)) {
+    return withoutTrailingSlash;
+  }
+
+  return `${withoutTrailingSlash}/api`;
+}
+
+const API_URL = resolveApiBaseUrl();
 
 export async function POST(request: Request) {
   const body = await request.json();

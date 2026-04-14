@@ -19,7 +19,10 @@ function buildApiUploadPattern(apiUrl) {
   }
 }
 
-const apiUploadPattern = buildApiUploadPattern(process.env.NEXT_PUBLIC_API_URL || process.env.API_URL || "");
+const apiUploadPatterns = [
+  buildApiUploadPattern(process.env.API_URL || ""),
+  buildApiUploadPattern(process.env.NEXT_PUBLIC_API_URL || "")
+].filter(Boolean);
 
 const nextConfig = {
   images: {
@@ -54,7 +57,7 @@ const nextConfig = {
         hostname: "res.cloudinary.com",
         pathname: "/**"
       },
-      ...(apiUploadPattern ? [apiUploadPattern] : [])
+      ...apiUploadPatterns
     ]
   },
   async headers() {

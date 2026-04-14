@@ -3,7 +3,18 @@ import { NextResponse } from "next/server";
 import { isValidImageUrl, sanitizeImageList } from "@/lib/media";
 import { resolveServiceMedia as resolveServiceMediaFallback } from "@/lib/service-media-fallback";
 
-const API_URL = process.env.API_URL || process.env.NEXT_PUBLIC_API_URL || "http://localhost:4000/api";
+function resolveApiBaseUrl() {
+  const raw = (process.env.API_URL || process.env.NEXT_PUBLIC_API_URL || "http://localhost:4000/api").trim();
+  const withoutTrailingSlash = raw.replace(/\/+$/, "");
+
+  if (/\/api$/i.test(withoutTrailingSlash)) {
+    return withoutTrailingSlash;
+  }
+
+  return `${withoutTrailingSlash}/api`;
+}
+
+const API_URL = resolveApiBaseUrl();
 const API_ORIGIN = API_URL.replace(/\/api\/?$/, "");
 
 type ProxyErrorPayload = {
@@ -102,7 +113,38 @@ export async function GET(request: Request) {
   const token = (await cookies()).get("admin_token")?.value;
 
   if (!token) {
-    return NextResponse.json({ message: "غير مصرح" }, { status: 401 });
+    const response = await fetch(`${API_URL}/services`, {
+      method: "GET",
+      cache: "no-store"
+    });
+
+    if (!response.ok) {
+      return NextResponse.json({ message: "تعذر تحميل الخدمات" }, { status: response.status });
+    }
+
+    const items = (await response.json()) as Array<{
+      id: string;
+      titleAr: string;
+      slug: string;
+      shortDescAr: string;
+      isPublished: boolean;
+      imageUrl?: string | null;
+      coverImage?: string | null;
+      gallery?: string[];
+      videoUrl?: string | null;
+    }>;
+
+    const normalized = items.map((item) =>
+      resolveServiceMediaFallback({
+        ...item,
+        imageUrl: normalizeMediaUrl(item.imageUrl),
+        coverImage: normalizeMediaUrl(item.coverImage),
+        gallery: normalizeMediaList(item.gallery),
+        videoUrl: normalizeMediaUrl(item.videoUrl)
+      })
+    );
+
+    return NextResponse.json(normalized);
   }
 
   const url = new URL(request.url);

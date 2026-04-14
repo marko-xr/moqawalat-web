@@ -1,6 +1,3 @@
-import fs from "node:fs";
-import path from "node:path";
-
 const SERVICE_DEFAULT_IMAGES = [
   "/images/services/default-01.svg",
   "/images/services/default-02.svg",
@@ -10,7 +7,6 @@ const SERVICE_DEFAULT_IMAGES = [
 ] as const;
 
 const SERVICE_FALLBACK_PREFIX = "/images/services/default-";
-const uploadsRoot = path.resolve(process.cwd(), "uploads");
 
 function getUploadRelativePath(value: string): string | null {
   const trimmed = value.trim();
@@ -34,25 +30,6 @@ function getUploadRelativePath(value: string): string | null {
   }
 
   return null;
-}
-
-function hasLocalUploadAsset(value: string): boolean {
-  const relativePath = getUploadRelativePath(value);
-
-  if (!relativePath) {
-    return true;
-  }
-
-  const normalizedSegments = relativePath
-    .split("/")
-    .map((segment) => segment.trim())
-    .filter(Boolean);
-
-  if (normalizedSegments.length === 0) {
-    return false;
-  }
-
-  return fs.existsSync(path.join(uploadsRoot, ...normalizedSegments));
 }
 
 function normalizeServiceImageUrl(value: string): string {
@@ -89,19 +66,16 @@ export function isValidServiceImageUrl(value: unknown): value is string {
   }
 
   if (
+    trimmed.startsWith("/uploads/") ||
+    trimmed.startsWith("uploads/") ||
     trimmed.startsWith("/images/") ||
     trimmed.startsWith("/")
   ) {
-    return hasLocalUploadAsset(trimmed);
+    return true;
   }
 
   try {
     const parsed = new URL(trimmed);
-
-    if (parsed.pathname.startsWith("/uploads/")) {
-      return hasLocalUploadAsset(trimmed);
-    }
-
     return parsed.protocol === "http:" || parsed.protocol === "https:";
   } catch {
     return false;

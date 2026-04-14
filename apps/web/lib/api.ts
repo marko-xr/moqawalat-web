@@ -2,7 +2,18 @@ import type { ServiceSeoPage } from "@/lib/types";
 import { isValidImageUrl, pickFirstImage, sanitizeImageList } from "@/lib/media";
 import { resolveServiceMedia as resolveServiceMediaFallback } from "@/lib/service-media-fallback";
 
-const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:4000/api";
+function resolveApiBaseUrl() {
+  const raw = (process.env.API_URL || process.env.NEXT_PUBLIC_API_URL || "http://localhost:4000/api").trim();
+  const withoutTrailingSlash = raw.replace(/\/+$/, "");
+
+  if (/\/api$/i.test(withoutTrailingSlash)) {
+    return withoutTrailingSlash;
+  }
+
+  return `${withoutTrailingSlash}/api`;
+}
+
+const API_URL = resolveApiBaseUrl();
 const REQUEST_TIMEOUT_MS = 8000;
 const DEFAULT_REVALIDATE_SECONDS = 300;
 const API_ORIGIN = API_URL.replace(/\/api\/?$/, "");

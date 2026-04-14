@@ -1,7 +1,18 @@
 import { cookies } from "next/headers";
 import { NextResponse } from "next/server";
 
-const API_URL = process.env.API_URL || process.env.NEXT_PUBLIC_API_URL || "http://localhost:4000/api";
+function resolveApiBaseUrl() {
+  const raw = (process.env.API_URL || process.env.NEXT_PUBLIC_API_URL || "http://localhost:4000/api").trim();
+  const withoutTrailingSlash = raw.replace(/\/+$/, "");
+
+  if (/\/api$/i.test(withoutTrailingSlash)) {
+    return withoutTrailingSlash;
+  }
+
+  return `${withoutTrailingSlash}/api`;
+}
+
+const API_URL = resolveApiBaseUrl();
 const API_ORIGIN = API_URL.replace(/\/api\/?$/, "");
 
 type BlogListItem = {
@@ -57,7 +68,21 @@ export async function GET(request: Request) {
   const token = (await cookies()).get("admin_token")?.value;
 
   if (!token) {
-    return NextResponse.json({ message: "Unauthorized" }, { status: 401 });
+    const response = await fetch(`${API_URL}/blog`, {
+      method: "GET",
+      cache: "no-store"
+    });
+
+    if (!response.ok) {
+      return NextResponse.json({ message: "Failed to load blog posts" }, { status: response.status });
+    }
+
+    const items = ((await response.json()) as BlogListItem[]).map((item) => ({
+      ...item,
+      coverImage: normalizeMediaUrl(item.coverImage)
+    }));
+
+    return NextResponse.json(items);
   }
 
   const url = new URL(request.url);
