@@ -3,8 +3,8 @@
 import { useState } from "react";
 
 export default function LoginPage() {
-  const [email, setEmail] = useState("owner@moqawalat.sa");
-  const [password, setPassword] = useState("Admin@12345");
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
   const [error, setError] = useState("");
 
   async function handleSubmit(event: React.FormEvent<HTMLFormElement>) {

@@ -93,11 +93,6 @@ export default function QuoteForm() {
     }, REQUEST_TIMEOUT_MS);
 
     try {
-      console.log("QuoteForm submit payload prepared", {
-        endpoint: `${API_URL}/leads`,
-        page: window.location.pathname
-      });
-
       const response = await fetch(`${API_URL}/leads`, {
         method: "POST",
         body: data,

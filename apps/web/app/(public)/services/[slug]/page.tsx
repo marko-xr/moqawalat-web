@@ -46,14 +46,20 @@ export default async function ServiceDetails({ params }: { params: Promise<{ slu
   const galleryDescriptions: string[] = Array.isArray(service.galleryDescriptions) ? service.galleryDescriptions : [];
   const videoUrl = service.videoUrl || "";
 
-  console.log("FRONTEND SERVICE DATA", service);
+  if (process.env.NODE_ENV !== "production") {
+    console.log("FRONTEND SERVICE DATA", service);
+  }
 
   if (!cover) {
-    console.warn("FRONTEND SERVICE COVER MISSING", service.slug);
+    if (process.env.NODE_ENV !== "production") {
+      console.warn("FRONTEND SERVICE COVER MISSING", service.slug);
+    }
   }
 
   if (gallery.length === 0) {
-    console.warn("FRONTEND SERVICE GALLERY EMPTY", service.slug);
+    if (process.env.NODE_ENV !== "production") {
+      console.warn("FRONTEND SERVICE GALLERY EMPTY", service.slug);
+    }
   }
 
   if (process.env.NODE_ENV !== "production") {
