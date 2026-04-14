@@ -1,5 +1,7 @@
 import type { Request, Response } from "express";
 import { Prisma } from "@prisma/client";
+import fs from "node:fs";
+import path from "node:path";
 import { prisma } from "../services/prisma.js";
 import { parseBoolean, parseGallery, uploadMediaFile, uploadMediaFiles } from "../services/media.js";
 import { resolveServiceMedia } from "../services/service-media-fallback.js";
@@ -24,6 +26,61 @@ type ServiceSeoSourceService = {
   isPublished?: boolean;
   updatedAt?: Date;
 };
+
+const uploadsRoot = path.resolve(process.cwd(), "uploads");
+
+function getUploadRelativePath(value: string): string | null {
+  const trimmed = value.trim();
+
+  if (trimmed.startsWith("/uploads/")) {
+    return trimmed.slice("/uploads/".length);
+  }
+
+  if (trimmed.startsWith("uploads/")) {
+    return trimmed.slice("uploads/".length);
+  }
+
+  try {
+    const parsed = new URL(trimmed);
+
+    if (parsed.pathname.startsWith("/uploads/")) {
+      return parsed.pathname.slice("/uploads/".length);
+    }
+  } catch {
+    return null;
+  }
+
+  return null;
+}
+
+function hasLocalUploadAsset(value: string): boolean {
+  const relativePath = getUploadRelativePath(value);
+
+  if (!relativePath) {
+    return true;
+  }
+
+  const normalizedSegments = relativePath
+    .split("/")
+    .map((segment) => segment.trim())
+    .filter(Boolean);
+
+  if (normalizedSegments.length === 0) {
+    return false;
+  }
+
+  return fs.existsSync(path.join(uploadsRoot, ...normalizedSegments));
+}
+
+function normalizeUploadUrl(value: string): string {
+  const relativePath = getUploadRelativePath(value);
+
+  if (!relativePath) {
+    return value.trim();
+  }
+
+  return `/uploads/${relativePath}`;
+}
 
 function toSlug(value: string) {
   return value
@@ -81,10 +138,10 @@ function normalizeFaq(items: unknown): FaqItem[] {
 
 function normalizeMediaList(items: unknown): string[] {
   const values = parseGallery(items)
-    .map((item) => String(item || "").trim())
+    .map((item) => normalizeUploadUrl(String(item || "")))
     .filter(Boolean);
 
-  return Array.from(new Set(values.filter((item) => isValidImageUrl(item))));
+  return Array.from(new Set(values.filter((item) => isValidImageUrl(item) && hasLocalUploadAsset(item))));
 }
 
 function isValidImageUrl(value: string) {
@@ -96,7 +153,14 @@ function isValidImageUrl(value: string) {
     return true;
   }
 
-  if (value.startsWith("/uploads/") || value.startsWith("uploads/") || value.startsWith("http://") || value.startsWith("https://")) {
+  if (
+    value.startsWith("/uploads/") ||
+    value.startsWith("uploads/") ||
+    value.startsWith("/images/") ||
+    value.startsWith("/") ||
+    value.startsWith("http://") ||
+    value.startsWith("https://")
+  ) {
     return true;
   }
 
@@ -105,6 +169,24 @@ function isValidImageUrl(value: string) {
 
 function isPlaceholderImage(value: string) {
   return value.includes("/images/placeholder-before.svg") || value.includes("/images/placeholder-after.svg");
+}
+
+function isUsableSectionImage(value: unknown) {
+  const normalized = String(value || "").trim();
+
+  if (!normalized) {
+    return false;
+  }
+
+  if (!isValidImageUrl(normalized)) {
+    return false;
+  }
+
+  if (isPlaceholderImage(normalized)) {
+    return false;
+  }
+
+  return hasLocalUploadAsset(normalized);
 }
 
 function mergeMediaLists(primary: unknown, secondary: unknown) {
@@ -139,7 +221,9 @@ function enrichSeoPageWithService(
       : ({} as ContentSections);
 
   const mergedImages = mergeMediaLists(page.images, resolvedService.gallery);
-  const heroImage = String((currentSections.heroImage as unknown) || "").trim();
+  const heroImage = normalizeUploadUrl(String((currentSections.heroImage as unknown) || "").trim());
+  const beforeImage = normalizeUploadUrl(String((currentSections.beforeImage as unknown) || "").trim());
+  const afterImage = normalizeUploadUrl(String((currentSections.afterImage as unknown) || "").trim());
   const serviceLead = resolvedService.shortDescAr?.trim() || resolvedService.contentAr?.trim() || null;
 
   currentSections.heroTitle =
@@ -149,8 +233,22 @@ function enrichSeoPageWithService(
     currentSections.heroLead = serviceLead;
   }
 
-  if (!heroImage || isPlaceholderImage(heroImage)) {
+  if (!isUsableSectionImage(heroImage)) {
     currentSections.heroImage = resolvedService.coverImage || mergedImages[0] || null;
+  } else {
+    currentSections.heroImage = heroImage;
+  }
+
+  if (!isUsableSectionImage(beforeImage)) {
+    currentSections.beforeImage = null;
+  } else {
+    currentSections.beforeImage = beforeImage;
+  }
+
+  if (!isUsableSectionImage(afterImage)) {
+    currentSections.afterImage = null;
+  } else {
+    currentSections.afterImage = afterImage;
   }
 
   return {

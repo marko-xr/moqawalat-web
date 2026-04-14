@@ -1,3 +1,6 @@
+import fs from "node:fs";
+import path from "node:path";
+
 const SERVICE_DEFAULT_IMAGES = [
   "/images/services/default-01.svg",
   "/images/services/default-02.svg",
@@ -7,6 +10,60 @@ const SERVICE_DEFAULT_IMAGES = [
 ] as const;
 
 const SERVICE_FALLBACK_PREFIX = "/images/services/default-";
+const uploadsRoot = path.resolve(process.cwd(), "uploads");
+
+function getUploadRelativePath(value: string): string | null {
+  const trimmed = value.trim();
+
+  if (trimmed.startsWith("/uploads/")) {
+    return trimmed.slice("/uploads/".length);
+  }
+
+  if (trimmed.startsWith("uploads/")) {
+    return trimmed.slice("uploads/".length);
+  }
+
+  try {
+    const parsed = new URL(trimmed);
+
+    if (parsed.pathname.startsWith("/uploads/")) {
+      return parsed.pathname.slice("/uploads/".length);
+    }
+  } catch {
+    return null;
+  }
+
+  return null;
+}
+
+function hasLocalUploadAsset(value: string): boolean {
+  const relativePath = getUploadRelativePath(value);
+
+  if (!relativePath) {
+    return true;
+  }
+
+  const normalizedSegments = relativePath
+    .split("/")
+    .map((segment) => segment.trim())
+    .filter(Boolean);
+
+  if (normalizedSegments.length === 0) {
+    return false;
+  }
+
+  return fs.existsSync(path.join(uploadsRoot, ...normalizedSegments));
+}
+
+function normalizeServiceImageUrl(value: string): string {
+  const relativePath = getUploadRelativePath(value);
+
+  if (!relativePath) {
+    return value.trim();
+  }
+
+  return `/uploads/${relativePath}`;
+}
 
 function hashSeed(value: string): number {
   let hash = 0;
@@ -33,15 +90,18 @@ export function isValidServiceImageUrl(value: unknown): value is string {
 
   if (
     trimmed.startsWith("/images/") ||
-    trimmed.startsWith("/uploads/") ||
-    trimmed.startsWith("uploads/") ||
     trimmed.startsWith("/")
   ) {
-    return true;
+    return hasLocalUploadAsset(trimmed);
   }
 
   try {
     const parsed = new URL(trimmed);
+
+    if (parsed.pathname.startsWith("/uploads/")) {
+      return hasLocalUploadAsset(trimmed);
+    }
+
     return parsed.protocol === "http:" || parsed.protocol === "https:";
   } catch {
     return false;
@@ -74,7 +134,7 @@ export function resolveServiceMedia<T extends { slug?: string | null; titleAr?: 
   const sanitizedGallery = Array.from(
     new Set(
       (Array.isArray(service.gallery) ? service.gallery : [])
-        .map((item) => String(item || "").trim())
+        .map((item) => normalizeServiceImageUrl(String(item || "")))
         .filter(isRealServiceImageUrl)
     )
   );
@@ -83,8 +143,8 @@ export function resolveServiceMedia<T extends { slug?: string | null; titleAr?: 
   const gallery = sanitizedGallery.length > 0 ? sanitizedGallery : fallbackGallery;
 
   const coverCandidate =
-    (typeof service.coverImage === "string" ? service.coverImage.trim() : "") ||
-    (typeof service.imageUrl === "string" ? service.imageUrl.trim() : "");
+    (typeof service.coverImage === "string" ? normalizeServiceImageUrl(service.coverImage) : "") ||
+    (typeof service.imageUrl === "string" ? normalizeServiceImageUrl(service.imageUrl) : "");
 
   const coverImage = isValidServiceImageUrl(coverCandidate) ? coverCandidate : gallery[0];
 
