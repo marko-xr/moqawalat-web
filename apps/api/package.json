@@ -5,7 +5,7 @@
   "type": "module",
   "scripts": {
     "dev": "tsx watch src/server.ts",
-    "build": "tsc -p tsconfig.json",
+    "build": "tsc -p tsconfig.json && node -e \"const fs = require('fs'); const sha = process.env.GIT_COMMIT_SHA || 'unknown'; const file = 'dist/config/runtime-env.js'; const content = fs.readFileSync(file, 'utf8').replace('__BUILD_COMMIT_SHA__', sha); fs.writeFileSync(file, content);\"",
     "start": "node dist/server.js"
   },
   "dependencies": {

@@ -6,6 +6,12 @@ const port = Number(process.env.PORT || process.env.API_PORT || 4000);
 const host = "0.0.0.0";
 
 async function bootstrap() {
+  console.log("=== API STARTUP ===");
+  console.log("APP_VERSION:", process.env.APP_VERSION || "no-version");
+  console.log("CLOUDINARY_CONFIGURED:", !!process.env.CLOUDINARY_CLOUD_NAME);
+  console.log("NODE_ENV:", process.env.NODE_ENV);
+  console.log("=== END STARTUP ===");
+
   await ensurePrismaConnection();
 
   app.listen(port, host, () => {
