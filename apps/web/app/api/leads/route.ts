@@ -2,26 +2,13 @@ import { cookies } from "next/headers";
 import { NextResponse } from "next/server";
 
 const API_URL = process.env.API_URL || process.env.NEXT_PUBLIC_API_URL || "http://localhost:4000/api";
-const API_ORIGIN = API_URL.replace(/\/api\/?$/, "");
 
 function normalizeMediaUrl(value?: string | null) {
   if (!value) {
     return value;
   }
 
-  if (value.startsWith("http://") || value.startsWith("https://") || value.startsWith("data:")) {
-    return value;
-  }
-
-  if (value.startsWith("/uploads/")) {
-    return `${API_ORIGIN}${value}`;
-  }
-
-  if (value.startsWith("uploads/")) {
-    return `${API_ORIGIN}/${value}`;
-  }
-
-  return value;
+  return value.trim();
 }
 
 export async function POST(request: Request) {

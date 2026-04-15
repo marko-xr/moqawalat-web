@@ -13,26 +13,13 @@ function resolveApiBaseUrl() {
 }
 
 const API_URL = resolveApiBaseUrl();
-const API_ORIGIN = API_URL.replace(/\/api\/?$/, "");
 
 function normalizeMediaUrl(value?: string | null) {
   if (!value) {
     return value;
   }
 
-  if (value.startsWith("http://") || value.startsWith("https://") || value.startsWith("data:")) {
-    return value;
-  }
-
-  if (value.startsWith("/uploads/")) {
-    return `${API_ORIGIN}${value}`;
-  }
-
-  if (value.startsWith("uploads/")) {
-    return `${API_ORIGIN}/${value}`;
-  }
-
-  return value;
+  return value.trim();
 }
 
 function filterItems(items: Array<{ titleAr?: string; slug?: string; locationAr?: string; categoryAr?: string; isPublished?: boolean }>, q: string, published: string) {

@@ -31,18 +31,16 @@ export function isValidImageUrl(value: unknown, options: SanitizeOptions = {}): 
   }
 
   if (
-    trimmed.startsWith("/uploads/") ||
-    trimmed.startsWith("uploads/") ||
     trimmed.startsWith("/images/") ||
     trimmed.startsWith("/_next/") ||
-    trimmed.startsWith("/")
+    (trimmed.startsWith("/") && !trimmed.startsWith("/uploads/"))
   ) {
     return true;
   }
 
   try {
     const parsed = new URL(trimmed);
-    return parsed.protocol === "http:" || parsed.protocol === "https:";
+    return (parsed.protocol === "http:" || parsed.protocol === "https:") && !parsed.pathname.startsWith("/uploads/");
   } catch {
     return false;
   }

@@ -6,6 +6,9 @@
 - [ ] Quote form sends lead successfully
 - [ ] Quote form blocks honeypot spam submissions
 - [ ] Image upload works on lead form
+- [ ] New admin uploads are saved as `https://res.cloudinary.com/...` URLs in DB
+- [ ] Uploaded images load with HTTP 200 on public pages
+- [ ] Uploaded images still load after redeploy
 - [ ] Sticky call/WhatsApp buttons work
 - [ ] Click analytics increase for call/whatsapp/quote
 - [ ] Admin login works with seeded owner credentials
@@ -20,6 +23,11 @@
 ## Build Verification
 - `npm run build --workspace @moqawalat/api`
 - `npm run build --workspace @moqawalat/web`
+
+## Cloudinary Migration Verification
+- `npm run migrate:cloudinary-uploads:dry`
+- `npm run migrate:cloudinary-uploads`
+- [ ] Migration summary shows zero remaining `/uploads` references (or only logged missing-file failures)
 
 ## Security Verification
 - [ ] Protected endpoints return 401 without token

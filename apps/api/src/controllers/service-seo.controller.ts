@@ -1,7 +1,5 @@
 import type { Request, Response } from "express";
 import { Prisma } from "@prisma/client";
-import fs from "node:fs";
-import path from "node:path";
 import { prisma } from "../services/prisma.js";
 import { parseBoolean, parseGallery, uploadMediaFile, uploadMediaFiles } from "../services/media.js";
 import { resolveServiceMedia } from "../services/service-media-fallback.js";
@@ -27,59 +25,8 @@ type ServiceSeoSourceService = {
   updatedAt?: Date;
 };
 
-const uploadsRoot = path.resolve(process.cwd(), "uploads");
-
-function getUploadRelativePath(value: string): string | null {
-  const trimmed = value.trim();
-
-  if (trimmed.startsWith("/uploads/")) {
-    return trimmed.slice("/uploads/".length);
-  }
-
-  if (trimmed.startsWith("uploads/")) {
-    return trimmed.slice("uploads/".length);
-  }
-
-  try {
-    const parsed = new URL(trimmed);
-
-    if (parsed.pathname.startsWith("/uploads/")) {
-      return parsed.pathname.slice("/uploads/".length);
-    }
-  } catch {
-    return null;
-  }
-
-  return null;
-}
-
-function hasLocalUploadAsset(value: string): boolean {
-  const relativePath = getUploadRelativePath(value);
-
-  if (!relativePath) {
-    return true;
-  }
-
-  const normalizedSegments = relativePath
-    .split("/")
-    .map((segment) => segment.trim())
-    .filter(Boolean);
-
-  if (normalizedSegments.length === 0) {
-    return false;
-  }
-
-  return fs.existsSync(path.join(uploadsRoot, ...normalizedSegments));
-}
-
 function normalizeUploadUrl(value: string): string {
-  const relativePath = getUploadRelativePath(value);
-
-  if (!relativePath) {
-    return value.trim();
-  }
-
-  return `/uploads/${relativePath}`;
+  return value.trim();
 }
 
 function toSlug(value: string) {
@@ -141,7 +88,7 @@ function normalizeMediaList(items: unknown): string[] {
     .map((item) => normalizeUploadUrl(String(item || "")))
     .filter(Boolean);
 
-  return Array.from(new Set(values.filter((item) => isValidImageUrl(item) && hasLocalUploadAsset(item))));
+  return Array.from(new Set(values.filter((item) => isValidImageUrl(item))));
 }
 
 function isValidImageUrl(value: string) {
@@ -154,13 +101,21 @@ function isValidImageUrl(value: string) {
   }
 
   if (
-    value.startsWith("/uploads/") ||
-    value.startsWith("uploads/") ||
     value.startsWith("/images/") ||
-    value.startsWith("/") ||
+    value.startsWith("/_next/") ||
+    (value.startsWith("/") && !value.startsWith("/uploads/")) ||
     value.startsWith("http://") ||
     value.startsWith("https://")
   ) {
+    if (value.startsWith("http://") || value.startsWith("https://")) {
+      try {
+        const parsed = new URL(value);
+        return !parsed.pathname.startsWith("/uploads/");
+      } catch {
+        return false;
+      }
+    }
+
     return true;
   }
 
@@ -186,7 +141,7 @@ function isUsableSectionImage(value: unknown) {
     return false;
   }
 
-  return hasLocalUploadAsset(normalized);
+  return true;
 }
 
 function mergeMediaLists(primary: unknown, secondary: unknown) {

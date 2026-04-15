@@ -5,7 +5,6 @@ import compression from "compression";
 import helmet from "helmet";
 import morgan from "morgan";
 import rateLimit from "express-rate-limit";
-import path from "node:path";
 import multer from "multer";
 import authRoutes from "./routes/auth.routes.js";
 import servicesRoutes from "./routes/services.routes.js";
@@ -58,18 +57,6 @@ app.use(
   })
 );
 
-app.use(
-  "/uploads",
-  express.static(path.resolve(process.cwd(), "uploads"), {
-    maxAge: "30d",
-    immutable: true,
-    etag: true,
-    setHeaders: (res) => {
-      res.setHeader("Cache-Control", "public, max-age=2592000, immutable");
-    }
-  })
-);
-
 app.get("/", (_req, res) => {
   res.send("API is running");
 });
@@ -79,7 +66,12 @@ app.get("/api", (_req, res) => {
 });
 
 app.get("/api/health", (_req, res) => {
-  res.json({ ok: true, service: "moqawalat-api" });
+  res.json({
+    ok: true,
+    service: "moqawalat-api",
+    version: process.env.APP_VERSION || "no-version",
+    cloudinaryConfigured: Boolean(process.env.CLOUDINARY_CLOUD_NAME)
+  });
 });
 
 app.get("/api/debug/routes", (_req, res) => {

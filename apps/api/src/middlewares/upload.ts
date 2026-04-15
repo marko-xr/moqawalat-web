@@ -1,9 +1,7 @@
 import multer from "multer";
 import type { NextFunction, Request, Response } from "express";
-import fs from "node:fs";
-import path from "node:path";
 import { CloudinaryStorage } from "multer-storage-cloudinary";
-import { cloudinary, isCloudinaryConfigured } from "../config/cloudinary.js";
+import { cloudinary, ensureCloudinaryConfigured } from "../config/cloudinary.js";
 
 const routeFolderMap = new Map<string, string>([
   ["/api/services", "moqawalat/services"],
@@ -25,15 +23,13 @@ function resolveUploadFolder(baseUrl: string): string {
   return "moqawalat/uploads";
 }
 
-const uploadDir = path.resolve(process.cwd(), "uploads");
+ensureCloudinaryConfigured();
 
-if (!fs.existsSync(uploadDir)) {
-  fs.mkdirSync(uploadDir, { recursive: true });
-}
-
-const cloudinaryStorage = new CloudinaryStorage({
+const storage = new CloudinaryStorage({
   cloudinary,
   params: async (req) => {
+    ensureCloudinaryConfigured();
+
     return {
       folder: resolveUploadFolder(req.baseUrl || req.originalUrl || ""),
       resource_type: "image",
@@ -41,17 +37,6 @@ const cloudinaryStorage = new CloudinaryStorage({
     };
   }
 });
-
-const localDiskStorage = multer.diskStorage({
-  destination: (_req, _file, cb) => cb(null, uploadDir),
-  filename: (_req, file, cb) => {
-    const extension = path.extname(file.originalname || "").toLowerCase() || ".jpg";
-    const uniqueName = `${Date.now()}-${Math.round(Math.random() * 1e9)}${extension}`;
-    cb(null, uniqueName);
-  }
-});
-
-const storage = isCloudinaryConfigured ? cloudinaryStorage : localDiskStorage;
 
 function isImageMimeType(mimeType: string) {
   return mimeType.toLowerCase().startsWith("image/");

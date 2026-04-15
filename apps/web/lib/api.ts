@@ -16,7 +16,6 @@ function resolveApiBaseUrl() {
 const API_URL = resolveApiBaseUrl();
 const REQUEST_TIMEOUT_MS = 8000;
 const DEFAULT_REVALIDATE_SECONDS = 300;
-const API_ORIGIN = API_URL.replace(/\/api\/?$/, "");
 
 const DEFAULT_SERVICES_FALLBACK = [
   {
@@ -76,19 +75,7 @@ function normalizeMediaUrl(value?: string | null) {
     return value;
   }
 
-  if (value.startsWith("http://") || value.startsWith("https://") || value.startsWith("data:")) {
-    return value;
-  }
-
-  if (value.startsWith("/uploads/")) {
-    return `${API_ORIGIN}${value}`;
-  }
-
-  if (value.startsWith("uploads/")) {
-    return `${API_ORIGIN}/${value}`;
-  }
-
-  return value;
+  return value.trim();
 }
 
 function normalizeMediaList(value: unknown): string[] {

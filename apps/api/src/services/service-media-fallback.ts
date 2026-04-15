@@ -8,38 +8,8 @@ const SERVICE_DEFAULT_IMAGES = [
 
 const SERVICE_FALLBACK_PREFIX = "/images/services/default-";
 
-function getUploadRelativePath(value: string): string | null {
-  const trimmed = value.trim();
-
-  if (trimmed.startsWith("/uploads/")) {
-    return trimmed.slice("/uploads/".length);
-  }
-
-  if (trimmed.startsWith("uploads/")) {
-    return trimmed.slice("uploads/".length);
-  }
-
-  try {
-    const parsed = new URL(trimmed);
-
-    if (parsed.pathname.startsWith("/uploads/")) {
-      return parsed.pathname.slice("/uploads/".length);
-    }
-  } catch {
-    return null;
-  }
-
-  return null;
-}
-
 function normalizeServiceImageUrl(value: string): string {
-  const relativePath = getUploadRelativePath(value);
-
-  if (!relativePath) {
-    return value.trim();
-  }
-
-  return `/uploads/${relativePath}`;
+  return value.trim();
 }
 
 function hashSeed(value: string): number {
@@ -66,17 +36,16 @@ export function isValidServiceImageUrl(value: unknown): value is string {
   }
 
   if (
-    trimmed.startsWith("/uploads/") ||
-    trimmed.startsWith("uploads/") ||
     trimmed.startsWith("/images/") ||
-    trimmed.startsWith("/")
+    trimmed.startsWith("/_next/") ||
+    (trimmed.startsWith("/") && !trimmed.startsWith("/uploads/"))
   ) {
     return true;
   }
 
   try {
     const parsed = new URL(trimmed);
-    return parsed.protocol === "http:" || parsed.protocol === "https:";
+    return (parsed.protocol === "http:" || parsed.protocol === "https:") && !parsed.pathname.startsWith("/uploads/");
   } catch {
     return false;
   }

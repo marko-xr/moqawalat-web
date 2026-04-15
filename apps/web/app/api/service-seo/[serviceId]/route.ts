@@ -4,7 +4,6 @@ import { revalidatePath } from "next/cache";
 import { isValidImageUrl, pickFirstImage, sanitizeImageList } from "@/lib/media";
 
 const API_URL = process.env.API_URL || process.env.NEXT_PUBLIC_API_URL || "http://localhost:4000/api";
-const API_ORIGIN = API_URL.replace(/\/api\/?$/, "");
 
 type ProxyErrorPayload = {
   message?: string;
@@ -40,19 +39,7 @@ function normalizeMediaUrl(value?: string | null) {
     return value;
   }
 
-  if (value.startsWith("http://") || value.startsWith("https://") || value.startsWith("data:")) {
-    return value;
-  }
-
-  if (value.startsWith("/uploads/")) {
-    return `${API_ORIGIN}${value}`;
-  }
-
-  if (value.startsWith("uploads/")) {
-    return `${API_ORIGIN}/${value}`;
-  }
-
-  return value;
+  return value.trim();
 }
 
 function normalizeMediaList(value: unknown): string[] {

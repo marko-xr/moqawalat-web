@@ -100,6 +100,9 @@ JWT_EXPIRES_IN="7d"
 API_PORT=4000
 WEB_URL="http://localhost:3000"
 API_URL="http://localhost:4000"
+CLOUDINARY_CLOUD_NAME="your-cloud-name"
+CLOUDINARY_API_KEY="your-api-key"
+CLOUDINARY_API_SECRET="your-api-secret"
 WHATSAPP_NUMBER="966500000000"
 DEFAULT_PHONE="966500000000"
 ```
@@ -123,10 +126,14 @@ JWT_SECRET="replace-with-a-strong-secret"
 JWT_EXPIRES_IN="7d"
 API_PORT=4000
 WEB_URL="http://localhost:3000"
+CLOUDINARY_CLOUD_NAME="your-cloud-name"
+CLOUDINARY_API_KEY="your-api-key"
+CLOUDINARY_API_SECRET="your-api-secret"
 ```
 
 Important:
 - استخدم `postgresql://` فقط في `DATABASE_URL`.
+- Cloudinary is required for all uploads. The API fails fast when Cloudinary variables are missing.
 
 ---
 
@@ -147,6 +154,7 @@ npm run prisma:seed
 ### Run maintenance scripts safely
 ```bash
 npm run cleanup:images
+npm run migrate:cloudinary-uploads
 ```
 
 Notes:

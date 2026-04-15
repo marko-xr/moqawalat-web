@@ -5,7 +5,8 @@
   "type": "module",
   "scripts": {
     "dev": "tsx watch src/server.ts",
-    "build": "tsc -p tsconfig.json",
+    "build:version": "node scripts/write-build-version.mjs",
+    "build": "npm run build:version && tsc -p tsconfig.json",
     "start": "node dist/server.js"
   },
   "dependencies": {
