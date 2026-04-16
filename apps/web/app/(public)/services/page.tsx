@@ -1,13 +1,14 @@
 import type { Metadata } from "next";
 import ServiceCard from "@/components/ServiceCard";
 import { getServices } from "@/lib/api";
+import { isValidImageUrl } from "@/lib/media";
 import { SEO_KEYWORDS } from "@/lib/seo";
 import { resolveServiceMedia } from "@/lib/service-media-fallback";
 
 export const revalidate = 300;
 
-function hasValidCloudinaryImage(imageSrc: string | null | undefined): imageSrc is string {
-  return typeof imageSrc === "string" && imageSrc.startsWith("https://res.cloudinary.com/");
+function hasValidImage(imageSrc: string | null | undefined): imageSrc is string {
+  return typeof imageSrc === "string" && isValidImageUrl(imageSrc, { allowPlaceholders: false });
 }
 
 export const metadata: Metadata = {
@@ -19,10 +20,21 @@ export const metadata: Metadata = {
 
 export default async function ServicesPage() {
   const services = await getServices();
+
+  if (process.env.NODE_ENV !== "production") {
+    services.forEach((service) => {
+      const media = resolveServiceMedia(service);
+      console.log("FRONTEND RECEIVED IMAGES", `service:${service.slug}`, {
+        coverImage: media.coverImage || media.imageUrl || null,
+        galleryCount: Array.isArray(media.gallery) ? media.gallery.length : 0
+      });
+    });
+  }
+
   const validServices = services.filter((service) => {
     const media = resolveServiceMedia(service);
 
-    if (hasValidCloudinaryImage(media.coverImage)) {
+    if (hasValidImage(media.coverImage)) {
       return true;
     }
 

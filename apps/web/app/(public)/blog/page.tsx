@@ -1,13 +1,14 @@
 import Link from "next/link";
-import Image from "next/image";
 import type { Metadata } from "next";
 import { getBlogPosts } from "@/lib/api";
+import { isValidImageUrl } from "@/lib/media";
 import { SEO_KEYWORDS } from "@/lib/seo";
+import ClientImage from "@/components/ClientImage";
 
 export const revalidate = 300;
 
-function hasValidCloudinaryCoverImage(coverImage: string | null | undefined): coverImage is string {
-  return typeof coverImage === "string" && coverImage.startsWith("https://res.cloudinary.com/");
+function hasValidCoverImage(coverImage: string | null | undefined): coverImage is string {
+  return typeof coverImage === "string" && isValidImageUrl(coverImage, { allowPlaceholders: false });
 }
 
 export const metadata: Metadata = {
@@ -20,7 +21,7 @@ export const metadata: Metadata = {
 export default async function BlogPage() {
   const posts = await getBlogPosts();
   const validPosts = posts.filter((post) => {
-    if (hasValidCloudinaryCoverImage(post.coverImage)) {
+    if (hasValidCoverImage(post.coverImage)) {
       return true;
     }
 
@@ -59,13 +60,14 @@ export default async function BlogPage() {
             {validPosts.map((post) => (
               <article key={post.id} className="card blog-post-card">
                 <div className="blog-card-media">
-                  <Image
+                  <ClientImage
                     src={post.coverImage}
                     alt={post.titleAr}
                     width={1200}
                     height={720}
                     className="img-full"
                     sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw"
+                    errorContext={`blog-card:${post.slug}`}
                   />
                 </div>
                 <h3>{post.titleAr}</h3>

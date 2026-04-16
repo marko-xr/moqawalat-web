@@ -1,4 +1,4 @@
-const CLOUDINARY_SECURE_PREFIX = "https://res.cloudinary.com/";
+const RELATIVE_IMAGE_PREFIXES = ["/uploads/", "/images/", "uploads/", "images/", "./", "../"];
 
 type SanitizeOptions = {
   allowPlaceholders?: boolean;
@@ -16,7 +16,20 @@ export function isValidImageUrl(value: unknown, options: SanitizeOptions = {}): 
     return false;
   }
 
-  return trimmed.startsWith(CLOUDINARY_SECURE_PREFIX);
+  if (trimmed.startsWith("http://") || trimmed.startsWith("https://")) {
+    try {
+      const parsed = new URL(trimmed);
+      return parsed.protocol === "http:" || parsed.protocol === "https:";
+    } catch {
+      return false;
+    }
+  }
+
+  if (/^[a-zA-Z][a-zA-Z\d+\-.]*:/.test(trimmed)) {
+    return false;
+  }
+
+  return RELATIVE_IMAGE_PREFIXES.some((prefix) => trimmed.startsWith(prefix));
 }
 
 function flattenImageTokens(value: unknown): string[] {

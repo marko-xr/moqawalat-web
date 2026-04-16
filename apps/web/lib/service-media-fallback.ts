@@ -21,7 +21,7 @@ export function resolveServiceMedia<T extends { slug?: string | null; titleAr?: 
   const coverImage =
     isValidImageUrl(coverCandidate, { allowPlaceholders: false })
       ? coverCandidate
-      : gallery[0] || null;
+      : null;
 
   return {
     ...service,

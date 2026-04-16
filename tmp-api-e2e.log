@@ -1,0 +1,15 @@
+Starting server...
+NODE_ENV: undefined
+CLOUDINARY_CLOUD_NAME present: true
+CLOUDINARY_API_KEY present: true
+CLOUDINARY_API_SECRET present: true
+DATABASE_URL present: true
+[db-runtime] Loaded env files: C:\Users\xr343\OneDrive\Desktop\App-Projects\Moqawalat Web\apps\api\.env, C:\Users\xr343\OneDrive\Desktop\App-Projects\Moqawalat Web\.env
+[db-runtime] Active DB mode: DIRECT
+[db-runtime] DATABASE_URL (sanitized): postgresql://p***s@hopper.proxy.rlwy.net:15393/railway?ssl=unset
+Connecting to database (timeout 10000ms)...
+Server running on 55000
+Database connection established
+::1 - - [16/Apr/2026:16:07:47 +0000] "GET /api/health HTTP/1.1" 200 118 "-" "Mozilla/5.0 (Windows NT; Windows NT 10.0; en-US) WindowsPowerShell/5.1.26100.8115"
+::1 - - [16/Apr/2026:16:08:00 +0000] "POST /api/auth/login HTTP/1.1" 200 361 "-" "Mozilla/5.0 (Windows NT; Windows NT 10.0; en-US) WindowsPowerShell/5.1.26100.8115"
+::1 - - [16/Apr/2026:16:08:16 +0000] "PUT /api/services/cmo15ejks000012whtrie8bxq HTTP/1.1" 500 41 "-" "curl/8.18.0"

@@ -1,17 +1,18 @@
 import Link from "next/link";
 import type { Service } from "@/lib/types";
+import { isValidImageUrl } from "@/lib/media";
 import { resolveServiceMedia } from "@/lib/service-media-fallback";
 import ClientImage from "@/components/ClientImage";
 
-function hasValidCloudinaryImage(imageSrc: string | null | undefined): imageSrc is string {
-  return typeof imageSrc === "string" && imageSrc.startsWith("https://res.cloudinary.com/");
+function hasValidImage(imageSrc: string | null | undefined): imageSrc is string {
+  return typeof imageSrc === "string" && isValidImageUrl(imageSrc, { allowPlaceholders: false });
 }
 
 export default function ServiceCard({ service }: { service: Service }) {
   const media = resolveServiceMedia(service);
   const cover = media.coverImage;
 
-  if (!hasValidCloudinaryImage(cover)) {
+  if (!hasValidImage(cover)) {
     console.warn("Invalid service image for slug:", service.slug);
     return null;
   }

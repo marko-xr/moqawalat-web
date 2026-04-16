@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { useCallback, useEffect, useMemo, useState } from "react";
-import { sanitizeImageList } from "@/lib/media";
+import { isValidImageUrl, sanitizeImageList } from "@/lib/media";
 import ConfirmDeleteModal from "./ConfirmDeleteModal";
 import type { Service } from "@/lib/types";
 
@@ -62,7 +62,7 @@ function formatDate(value?: string) {
 
 function hasRealImage(item: Service): boolean {
   const cover = item.coverImage || item.imageUrl || "";
-  return cover.startsWith("https://res.cloudinary.com/");
+  return isValidImageUrl(cover, { allowPlaceholders: false });
 }
 
 type ApiValidationError = {

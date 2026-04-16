@@ -1,0 +1,6 @@
+Starting server...
+NODE_ENV: undefined
+CLOUDINARY_CLOUD_NAME present: false
+CLOUDINARY_API_KEY present: false
+CLOUDINARY_API_SECRET present: false
+DATABASE_URL present: true

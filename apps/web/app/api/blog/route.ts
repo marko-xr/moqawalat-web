@@ -14,6 +14,16 @@ function resolveApiBaseUrl() {
 
 const API_URL = resolveApiBaseUrl();
 
+function resolveApiOrigin() {
+  try {
+    return new URL(API_URL).origin;
+  } catch {
+    return "";
+  }
+}
+
+const API_ORIGIN = resolveApiOrigin();
+
 type BlogListItem = {
   id: string;
   titleAr: string;
@@ -33,7 +43,17 @@ function normalizeMediaUrl(value?: string | null) {
     return value;
   }
 
-  return value.trim();
+  const trimmed = value.trim();
+
+  if (trimmed.startsWith("/uploads/") && API_ORIGIN) {
+    return `${API_ORIGIN}${trimmed}`;
+  }
+
+  if (trimmed.startsWith("uploads/") && API_ORIGIN) {
+    return `${API_ORIGIN}/${trimmed}`;
+  }
+
+  return trimmed;
 }
 
 function filterItems(items: BlogListItem[], q: string, published: string) {

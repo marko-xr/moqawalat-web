@@ -4,6 +4,8 @@ import Image from "next/image";
 import { useEffect, useState } from "react";
 import type { ImageProps } from "next/image";
 
+const CLOUDINARY_SECURE_PREFIX = "https://res.cloudinary.com/";
+
 type ClientImageProps = Omit<ImageProps, "src" | "onError"> & {
   src: string;
   errorContext?: string;
@@ -16,6 +18,7 @@ export default function ClientImage({
   ...props
 }: ClientImageProps) {
   const [failed, setFailed] = useState(false);
+  const shouldOptimize = src.startsWith(CLOUDINARY_SECURE_PREFIX);
 
   useEffect(() => {
     setFailed(false);
@@ -47,6 +50,7 @@ export default function ClientImage({
       {...props}
       src={src}
       alt={alt}
+      unoptimized={!shouldOptimize}
       onError={handleError}
     />
   );

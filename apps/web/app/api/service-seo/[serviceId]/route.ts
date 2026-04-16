@@ -5,6 +5,16 @@ import { isValidImageUrl, pickFirstImage, sanitizeImageList } from "@/lib/media"
 
 const API_URL = process.env.API_URL || process.env.NEXT_PUBLIC_API_URL || "http://localhost:4000/api";
 
+function resolveApiOrigin() {
+  try {
+    return new URL(API_URL).origin;
+  } catch {
+    return "";
+  }
+}
+
+const API_ORIGIN = resolveApiOrigin();
+
 type ProxyErrorPayload = {
   message?: string;
   code?: string;
@@ -39,7 +49,17 @@ function normalizeMediaUrl(value?: string | null) {
     return value;
   }
 
-  return value.trim();
+  const trimmed = value.trim();
+
+  if (trimmed.startsWith("/uploads/") && API_ORIGIN) {
+    return `${API_ORIGIN}${trimmed}`;
+  }
+
+  if (trimmed.startsWith("uploads/") && API_ORIGIN) {
+    return `${API_ORIGIN}/${trimmed}`;
+  }
+
+  return trimmed;
 }
 
 function normalizeMediaList(value: unknown): string[] {

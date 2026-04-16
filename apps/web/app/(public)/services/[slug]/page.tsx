@@ -2,15 +2,15 @@ import type { Metadata } from "next";
 import { getServiceBySlug, getServices } from "@/lib/api";
 import { notFound } from "next/navigation";
 import { getSiteUrl } from "@/lib/site-url";
-import { pickFirstImage, sanitizeImageList } from "@/lib/media";
+import { isValidImageUrl, pickFirstImage, sanitizeImageList } from "@/lib/media";
 import { resolveServiceMedia } from "@/lib/service-media-fallback";
 import ServiceImageDebugPanel from "@/components/dev/ServiceImageDebugPanel";
 import ClientImage from "@/components/ClientImage";
 
 export const revalidate = 300;
 
-function hasValidCloudinaryImage(imageSrc: string | null | undefined): imageSrc is string {
-  return typeof imageSrc === "string" && imageSrc.startsWith("https://res.cloudinary.com/");
+function hasValidImage(imageSrc: string | null | undefined): imageSrc is string {
+  return typeof imageSrc === "string" && isValidImageUrl(imageSrc, { allowPlaceholders: false });
 }
 
 export async function generateStaticParams() {
@@ -19,10 +19,9 @@ export async function generateStaticParams() {
   return services
     .filter((service) => {
       const media = resolveServiceMedia(service);
-      const cover =
-        pickFirstImage([media.coverImage, media.imageUrl], { allowPlaceholders: false }) || media.gallery[0] || null;
+      const cover = pickFirstImage([media.coverImage, media.imageUrl], { allowPlaceholders: false });
 
-      if (hasValidCloudinaryImage(cover)) {
+      if (hasValidImage(cover)) {
         return true;
       }
 
@@ -60,11 +59,11 @@ export default async function ServiceDetails({ params }: { params: Promise<{ slu
 
   const media = resolveServiceMedia(service);
   const gallery: string[] = sanitizeImageList(media.gallery, { allowPlaceholders: false });
-  const cover = pickFirstImage([media.coverImage, media.imageUrl], { allowPlaceholders: false }) || media.gallery[0] || null;
+  const cover = pickFirstImage([media.coverImage, media.imageUrl], { allowPlaceholders: false });
   const galleryDescriptions: string[] = Array.isArray(service.galleryDescriptions) ? service.galleryDescriptions : [];
   const videoUrl = service.videoUrl || "";
 
-  if (!hasValidCloudinaryImage(cover)) {
+  if (!hasValidImage(cover)) {
     console.warn("Invalid service image for slug:", service.slug);
     return notFound();
   }
@@ -76,6 +75,11 @@ export default async function ServiceDetails({ params }: { params: Promise<{ slu
   }
 
   if (process.env.NODE_ENV !== "production") {
+    console.log("FRONTEND RECEIVED IMAGES", service.slug, {
+      coverImage: media.coverImage || media.imageUrl || null,
+      galleryCount: Array.isArray(media.gallery) ? media.gallery.length : 0
+    });
+
     console.log("[service-page]", service.slug, {
       coverImage: cover,
       galleryCount: gallery.length,

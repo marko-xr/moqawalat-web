@@ -1,5 +1,6 @@
-import Image from "next/image";
 import { notFound } from "next/navigation";
+import { isValidImageUrl } from "@/lib/media";
+import ClientImage from "@/components/ClientImage";
 
 type HeroProps = {
   title?: string;
@@ -15,8 +16,8 @@ const defaultPoints = [
   "تنفيذ سريع ونظيف مع التزام كامل بالجودة."
 ];
 
-function hasValidCloudinaryImage(imageSrc: string | undefined): imageSrc is string {
-  return typeof imageSrc === "string" && imageSrc.startsWith("https://res.cloudinary.com/");
+function hasValidImage(imageSrc: string | undefined): imageSrc is string {
+  return typeof imageSrc === "string" && isValidImageUrl(imageSrc, { allowPlaceholders: false });
 }
 
 export default function Hero({
@@ -27,7 +28,7 @@ export default function Hero({
   imageSrc,
   imageAlt = "عزل اسطح فوم في الدمام"
 }: HeroProps) {
-  if (!hasValidCloudinaryImage(imageSrc)) {
+  if (!hasValidImage(imageSrc)) {
     console.warn("Invalid roof hero image:", imageSrc ?? "(empty)");
     return notFound();
   }
@@ -45,13 +46,14 @@ export default function Hero({
       </div>
 
       <div className="roof-hero-media">
-        <Image
+        <ClientImage
           src={imageSrc}
           alt={imageAlt}
           width={1200}
           height={800}
           sizes="(max-width: 1024px) 100vw, 45vw"
           priority
+          errorContext="roof-hero"
         />
       </div>
     </section>

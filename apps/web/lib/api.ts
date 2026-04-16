@@ -14,6 +14,16 @@ function resolveApiBaseUrl() {
 }
 
 const API_URL = resolveApiBaseUrl();
+
+function resolveApiOrigin() {
+  try {
+    return new URL(API_URL).origin;
+  } catch {
+    return "";
+  }
+}
+
+const API_ORIGIN = resolveApiOrigin();
 const REQUEST_TIMEOUT_MS = 8000;
 const DEFAULT_REVALIDATE_SECONDS = 300;
 
@@ -29,7 +39,17 @@ function normalizeMediaUrl(value?: string | null) {
     return value;
   }
 
-  return value.trim();
+  const trimmed = value.trim();
+
+  if (trimmed.startsWith("/uploads/") && API_ORIGIN) {
+    return `${API_ORIGIN}${trimmed}`;
+  }
+
+  if (trimmed.startsWith("uploads/") && API_ORIGIN) {
+    return `${API_ORIGIN}/${trimmed}`;
+  }
+
+  return trimmed;
 }
 
 function normalizeMediaList(value: unknown): string[] {
@@ -193,7 +213,18 @@ export async function getServiceSeoPageByServiceSlug(slug: string) {
 export async function getProjects() {
   try {
     const projects = await request<any[]>("/projects");
-    return projects.map((project) => normalizeProject(project));
+    const normalized = projects.map((project) => normalizeProject(project));
+
+    if (process.env.NODE_ENV !== "production") {
+      normalized.forEach((project) => {
+        console.log("FRONTEND RECEIVED IMAGES", `project:${project.slug}`, {
+          coverImage: project.coverImage || project.afterImage || project.beforeImage || null,
+          galleryCount: Array.isArray(project.gallery) ? project.gallery.length : 0
+        });
+      });
+    }
+
+    return normalized;
   } catch {
     return [];
   }
@@ -202,7 +233,16 @@ export async function getProjects() {
 export async function getProjectBySlug(slug: string) {
   try {
     const project = await request<any>(`/projects/${slug}`);
-    return normalizeProject(project);
+    const normalized = normalizeProject(project);
+
+    if (process.env.NODE_ENV !== "production") {
+      console.log("FRONTEND RECEIVED IMAGES", `project-by-slug:${slug}`, {
+        coverImage: normalized.coverImage || normalized.afterImage || normalized.beforeImage || null,
+        galleryCount: Array.isArray(normalized.gallery) ? normalized.gallery.length : 0
+      });
+    }
+
+    return normalized;
   } catch {
     return null;
   }
@@ -211,7 +251,17 @@ export async function getProjectBySlug(slug: string) {
 export async function getBlogPosts() {
   try {
     const posts = await request<any[]>("/blog");
-    return posts.map((post) => normalizeBlogPost(post));
+    const normalized = posts.map((post) => normalizeBlogPost(post));
+
+    if (process.env.NODE_ENV !== "production") {
+      normalized.forEach((post) => {
+        console.log("FRONTEND RECEIVED IMAGES", `blog:${post.slug}`, {
+          coverImage: post.coverImage || null
+        });
+      });
+    }
+
+    return normalized;
   } catch {
     return [];
   }
@@ -220,7 +270,15 @@ export async function getBlogPosts() {
 export async function getBlogBySlug(slug: string) {
   try {
     const post = await request<any>(`/blog/${slug}`);
-    return normalizeBlogPost(post);
+    const normalized = normalizeBlogPost(post);
+
+    if (process.env.NODE_ENV !== "production") {
+      console.log("FRONTEND RECEIVED IMAGES", `blog-by-slug:${slug}`, {
+        coverImage: normalized.coverImage || null
+      });
+    }
+
+    return normalized;
   } catch {
     return null;
   }

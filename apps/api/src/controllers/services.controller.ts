@@ -517,7 +517,7 @@ export async function createService(req: Request, res: Response) {
       }
     }
 
-    const coverImageValue = coverImage || rawCoverImage || rawImageUrl || gallery[0] || null;
+    const coverImageValue = coverImage || rawCoverImage || rawImageUrl || null;
     const normalizedGalleryDescriptions = normalizeDescriptions(galleryDescriptions, gallery.length);
 
     const createData: any = {
@@ -665,7 +665,7 @@ export async function updateService(req: Request, res: Response) {
     const nextImageUrl = imageUrl === undefined ? currentService.imageUrl : imageUrl || null;
     const nextGallery = hasGalleryField || uploadedGallery.length > 0 ? gallery : currentService.gallery;
     const currentOrIncomingCover = coverValue === undefined ? currentService.coverImage : coverValue;
-    const nextCoverImage = currentOrIncomingCover || nextImageUrl || nextGallery[0] || null;
+    const nextCoverImage = currentOrIncomingCover || nextImageUrl || null;
 
     if (hasGalleryDescriptionsField) {
       galleryDescriptions = normalizeDescriptions(galleryDescriptions, nextGallery.length);

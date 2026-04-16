@@ -1,0 +1,13 @@
+Starting server...
+NODE_ENV: undefined
+CLOUDINARY_CLOUD_NAME present: true
+CLOUDINARY_API_KEY present: true
+CLOUDINARY_API_SECRET present: true
+DATABASE_URL present: true
+[db-runtime] Loaded env files: C:\Users\xr343\OneDrive\Desktop\App-Projects\Moqawalat Web\apps\api\.env, C:\Users\xr343\OneDrive\Desktop\App-Projects\Moqawalat Web\.env
+[db-runtime] Active DB mode: DIRECT
+[db-runtime] DATABASE_URL (sanitized): postgresql://p***s@hopper.proxy.rlwy.net:15393/railway?ssl=unset
+CLOUDINARY CONFIG CHECK: { cloud_name: true, api_key: true, api_secret: true }
+Connecting to database (timeout 10000ms)...
+Server running on 55000
+Database connection established

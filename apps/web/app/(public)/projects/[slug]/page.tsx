@@ -1,12 +1,13 @@
 import type { Metadata } from "next";
 import { notFound } from "next/navigation";
-import Image from "next/image";
 import { getProjectBySlug, getProjects } from "@/lib/api";
+import { isValidImageUrl } from "@/lib/media";
+import ClientImage from "@/components/ClientImage";
 
 export const revalidate = 300;
 
-function hasValidCloudinaryImage(imageSrc: string | null | undefined): imageSrc is string {
-  return typeof imageSrc === "string" && imageSrc.startsWith("https://res.cloudinary.com/");
+function hasValidImage(imageSrc: string | null | undefined): imageSrc is string {
+  return typeof imageSrc === "string" && isValidImageUrl(imageSrc, { allowPlaceholders: false });
 }
 
 export async function generateStaticParams() {
@@ -16,7 +17,7 @@ export async function generateStaticParams() {
     .filter((project) => {
       const coverImage = project.coverImage || project.afterImage || project.beforeImage || null;
 
-      if (hasValidCloudinaryImage(coverImage)) {
+      if (hasValidImage(coverImage)) {
         return true;
       }
 
@@ -56,7 +57,7 @@ export default async function ProjectDetails({ params }: { params: Promise<{ slu
   const gallery: string[] = project.gallery || [];
   const videoUrl = project.videoUrl || "";
 
-  if (!hasValidCloudinaryImage(cover)) {
+  if (!hasValidImage(cover)) {
     console.warn("Invalid project image for slug:", project.slug);
     return notFound();
   }
@@ -93,13 +94,14 @@ export default async function ProjectDetails({ params }: { params: Promise<{ slu
             </div>
           </div>
           <div className="project-hero-media">
-            <Image
+            <ClientImage
               src={cover}
               alt={project.titleAr}
               width={1280}
               height={853}
               sizes="(max-width: 1024px) 100vw, 50vw"
               priority
+              errorContext={`project-hero:${project.slug}`}
             />
           </div>
         </div>
@@ -109,24 +111,26 @@ export default async function ProjectDetails({ params }: { params: Promise<{ slu
             {project.beforeImage ? (
               <div className="project-before">
                 <span>قبل</span>
-                <Image
+                <ClientImage
                   src={project.beforeImage}
                   alt={`قبل - ${project.titleAr}`}
                   width={1100}
                   height={733}
                   sizes="(max-width: 1024px) 100vw, 50vw"
+                  errorContext={`project-before:${project.slug}`}
                 />
               </div>
             ) : null}
             {project.afterImage ? (
               <div className="project-after">
                 <span>بعد</span>
-                <Image
+                <ClientImage
                   src={project.afterImage}
                   alt={`بعد - ${project.titleAr}`}
                   width={1100}
                   height={733}
                   sizes="(max-width: 1024px) 100vw, 50vw"
+                  errorContext={`project-after:${project.slug}`}
                 />
               </div>
             ) : null}
@@ -137,12 +141,13 @@ export default async function ProjectDetails({ params }: { params: Promise<{ slu
           <div className="project-gallery">
             {gallery.map((src, index) => (
               <div className="project-gallery-item" key={`${src}-${index}`}>
-                <Image
+                <ClientImage
                   src={src}
                   alt={`${project.titleAr} ${index + 1}`}
                   width={1000}
                   height={750}
                   sizes="(max-width: 1024px) 100vw, 50vw"
+                  errorContext={`project-gallery:${project.slug}`}
                 />
               </div>
             ))}

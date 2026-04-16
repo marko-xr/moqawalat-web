@@ -1,8 +1,9 @@
 import type { Metadata } from "next";
 import Link from "next/link";
-import Image from "next/image";
 import { getProjects } from "@/lib/api";
+import { isValidImageUrl } from "@/lib/media";
 import { LOCAL_AREAS, SEO_KEYWORDS } from "@/lib/seo";
+import ClientImage from "@/components/ClientImage";
 
 export const revalidate = 300;
 
@@ -13,8 +14,8 @@ export const metadata: Metadata = {
   alternates: { canonical: "/projects" }
 };
 
-function hasValidCloudinaryImage(imageSrc: string | null | undefined): imageSrc is string {
-  return typeof imageSrc === "string" && imageSrc.startsWith("https://res.cloudinary.com/");
+function hasValidImage(imageSrc: string | null | undefined): imageSrc is string {
+  return typeof imageSrc === "string" && isValidImageUrl(imageSrc, { allowPlaceholders: false });
 }
 
 export default async function ProjectsPage() {
@@ -22,7 +23,7 @@ export default async function ProjectsPage() {
   const validProjects = projects.flatMap((project) => {
     const coverImage = project.coverImage || project.afterImage || project.beforeImage || null;
 
-    if (hasValidCloudinaryImage(coverImage)) {
+    if (hasValidImage(coverImage)) {
       return [{ project, coverImage }];
     }
 
@@ -39,13 +40,14 @@ export default async function ProjectsPage() {
             <article key={project.id} className="card">
               <Link href={`/projects/${project.slug}`} className="project-card-link" prefetch={false}>
                 <div className="project-card-media">
-                  <Image
+                  <ClientImage
                     src={coverImage}
                     alt={project.titleAr}
                     className="img-full"
                     width={900}
                     height={600}
                     sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw"
+                    errorContext={`project-card:${project.slug}`}
                   />
                 </div>
                 <h3>{project.titleAr}</h3>

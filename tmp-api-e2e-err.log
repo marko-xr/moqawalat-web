@@ -1,0 +1,6 @@
+API error: {
+  message: 'Invalid api_key placeholder',
+  name: 'Error',
+  http_code: 401,
+  storageErrors: []
+}

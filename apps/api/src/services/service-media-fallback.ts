@@ -1,20 +1,11 @@
-const CLOUDINARY_SECURE_PREFIX = "https://res.cloudinary.com/";
+import { isValidImageUrl, normalizeImageUrl } from "./media.js";
 
 function normalizeServiceImageUrl(value: string): string {
-  return value.trim();
+  return normalizeImageUrl(value);
 }
 
 export function isValidServiceImageUrl(value: unknown): value is string {
-  if (typeof value !== "string") {
-    return false;
-  }
-
-  const trimmed = value.trim();
-  if (!trimmed) {
-    return false;
-  }
-
-  return trimmed.startsWith(CLOUDINARY_SECURE_PREFIX);
+  return isValidImageUrl(value);
 }
 
 export function isRealServiceImageUrl(value: unknown): value is string {
@@ -38,7 +29,7 @@ export function resolveServiceMedia<T extends { slug?: string | null; titleAr?: 
     (typeof service.coverImage === "string" ? normalizeServiceImageUrl(service.coverImage) : "") ||
     (typeof service.imageUrl === "string" ? normalizeServiceImageUrl(service.imageUrl) : "");
 
-  const coverImage = isValidServiceImageUrl(coverCandidate) ? coverCandidate : gallery[0] || null;
+  const coverImage = isValidServiceImageUrl(coverCandidate) ? coverCandidate : null;
 
   return {
     ...service,

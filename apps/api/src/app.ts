@@ -139,7 +139,7 @@ app.use((err: Error, _req: express.Request, res: express.Response, _next: expres
 
   if (err.message === "INVALID_UPLOAD_URL") {
     return res.status(422).json({
-      message: "Uploaded media URL is invalid. Expected a Cloudinary secure URL.",
+      message: "Uploaded media URL is invalid. Expected http(s) or allowed relative image paths.",
       code: "INVALID_UPLOAD_URL"
     });
   }

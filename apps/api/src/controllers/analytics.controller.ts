@@ -1,10 +1,9 @@
 import type { Request, Response } from "express";
 import { prisma } from "../services/prisma.js";
-
-const REAL_IMAGE_PATTERN = /^https?:\/\//;
+import { isValidImageUrl } from "../services/media.js";
 
 function isRealImageUrl(value: string | null | undefined): boolean {
-  return typeof value === "string" && REAL_IMAGE_PATTERN.test(value.trim());
+  return typeof value === "string" && isValidImageUrl(value);
 }
 
 function serviceHasRealImages(service: { coverImage: string | null; gallery: string[] }): boolean {

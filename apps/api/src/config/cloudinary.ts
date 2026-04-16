@@ -4,8 +4,6 @@ const cloudName = process.env.CLOUDINARY_CLOUD_NAME?.trim() || "";
 const apiKey = process.env.CLOUDINARY_API_KEY?.trim() || "";
 const apiSecret = process.env.CLOUDINARY_API_SECRET?.trim() || "";
 
-export const isCloudinaryConfigured = Boolean(cloudName && apiKey && apiSecret);
-
 export const missingCloudinaryEnvVars = [
   ["CLOUDINARY_CLOUD_NAME", cloudName],
   ["CLOUDINARY_API_KEY", apiKey],
@@ -14,22 +12,21 @@ export const missingCloudinaryEnvVars = [
   .filter(([, value]) => !value)
   .map(([name]) => name);
 
-if (isCloudinaryConfigured) {
-  cloudinary.config({
-    cloud_name: cloudName,
-    api_key: apiKey,
-    api_secret: apiSecret,
-    secure: true
-  });
+if (!cloudName || !apiKey || !apiSecret) {
+  throw new Error("Cloudinary environment variables are missing");
 }
 
-export function ensureCloudinaryConfigured() {
-  if (isCloudinaryConfigured) {
-    return;
-  }
+cloudinary.config({
+  cloud_name: process.env.CLOUDINARY_CLOUD_NAME,
+  api_key: process.env.CLOUDINARY_API_KEY,
+  api_secret: process.env.CLOUDINARY_API_SECRET,
+  secure: true
+});
 
-  const missing = missingCloudinaryEnvVars.join(", ");
-  throw new Error(`Cloudinary is not configured. Missing required environment variables: ${missing}`);
+export const isCloudinaryConfigured = true;
+
+export function ensureCloudinaryConfigured() {
+  return;
 }
 
 export { cloudinary };
