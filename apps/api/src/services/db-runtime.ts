@@ -126,24 +126,47 @@ function throwDatabaseUrlError(databaseUrl: string, source: string): never {
   );
 }
 
-export function initializeDatabaseRuntime(options?: { runtime?: DatabaseRuntime; source?: string }) {
+export function initializeDatabaseRuntime(options?: { runtime?: DatabaseRuntime; source?: string; strict?: boolean }) {
   const runtime = options?.runtime ?? "api";
   const source = options?.source ?? "unknown-source";
+  const strict = options?.strict ?? true;
 
   loadEnvironment(runtime);
 
   const databaseUrl = process.env.DATABASE_URL?.trim() || "";
 
   if (!databaseUrl) {
-    throw new Error(
-      `${LOG_PREFIX} DATABASE_URL is required but missing. Define a PostgreSQL connection string (postgresql://...) before starting. Source: ${source}`
-    );
+    const message =
+      `${LOG_PREFIX} DATABASE_URL is missing. Define a PostgreSQL connection string (postgresql://...) before starting. Source: ${source}`;
+
+    if (strict) {
+      throw new Error(message);
+    }
+
+    console.error(message);
+    return {
+      mode: "INVALID" as const,
+      databaseUrl,
+      sanitized: "(missing DATABASE_URL)"
+    };
   }
 
   const mode = classifyDatabaseUrl(databaseUrl);
 
   if (mode !== "DIRECT") {
-    throwDatabaseUrlError(databaseUrl, source);
+    if (strict) {
+      throwDatabaseUrlError(databaseUrl, source);
+    }
+
+    console.error(
+      `${LOG_PREFIX} Invalid DATABASE_URL protocol. Expected postgresql://. Source: ${source}`
+    );
+
+    return {
+      mode,
+      databaseUrl,
+      sanitized: sanitizeDatabaseUrl(databaseUrl)
+    };
   }
 
   runtimeState.lastValidatedUrl = databaseUrl;

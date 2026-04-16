@@ -16,7 +16,13 @@ function inferRuntimeFromEntryPoint(): DatabaseRuntime {
   return "api";
 }
 
-initializeDatabaseRuntime({ runtime: inferRuntimeFromEntryPoint(), source: "apps/api/src/services/prisma.ts" });
+const runtime = inferRuntimeFromEntryPoint();
+
+initializeDatabaseRuntime({
+  runtime,
+  source: "apps/api/src/services/prisma.ts",
+  strict: runtime === "script"
+});
 
 const globalForPrisma = globalThis as unknown as {
   prisma?: PrismaClient;

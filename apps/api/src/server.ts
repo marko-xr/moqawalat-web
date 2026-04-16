@@ -1,23 +1,87 @@
-import "./config/runtime-env.js";
-import { app } from "./app.js";
-import { ensureCloudinaryConfigured } from "./config/cloudinary.js";
+import fs from "node:fs";
+import path from "node:path";
+import { fileURLToPath } from "node:url";
+import dotenv from "dotenv";
 import { BUILD_COMMIT_SHA } from "./generated/build-version.js";
-import { ensurePrismaConnection } from "./services/prisma.js";
 
-const port = Number(process.env.PORT || process.env.API_PORT || 4000);
-const host = "0.0.0.0";
+const DB_CONNECT_TIMEOUT_MS = Number(process.env.DB_CONNECT_TIMEOUT_MS || 10000);
+
+function hasEnv(name: string) {
+  return Boolean(process.env[name]?.trim());
+}
+
+function registerGlobalErrorHandlers() {
+  process.on("uncaughtException", (error) => {
+    console.error("uncaughtException:", error);
+  });
+
+  process.on("unhandledRejection", (reason) => {
+    console.error("unhandledRejection:", reason);
+  });
+}
+
+function loadEnvironmentFiles() {
+  const moduleDir = path.dirname(fileURLToPath(import.meta.url));
+  const apiRoot = path.resolve(moduleDir, "..");
+  const repoRoot = path.resolve(apiRoot, "..", "..");
+  const candidates = [path.join(apiRoot, ".env"), path.join(repoRoot, ".env")];
+
+  for (const envFile of candidates) {
+    if (fs.existsSync(envFile)) {
+      dotenv.config({ path: envFile, override: false });
+    }
+  }
+}
+
+function logStartupContext() {
+  console.log("Starting server...");
+  console.log("NODE_ENV:", process.env.NODE_ENV || "undefined");
+  console.log("CLOUDINARY_CLOUD_NAME present:", hasEnv("CLOUDINARY_CLOUD_NAME"));
+  console.log("CLOUDINARY_API_KEY present:", hasEnv("CLOUDINARY_API_KEY"));
+  console.log("CLOUDINARY_API_SECRET present:", hasEnv("CLOUDINARY_API_SECRET"));
+  console.log("DATABASE_URL present:", hasEnv("DATABASE_URL"));
+}
+
+function validateCloudinaryOrExit() {
+  if (!hasEnv("CLOUDINARY_CLOUD_NAME") || !hasEnv("CLOUDINARY_API_KEY") || !hasEnv("CLOUDINARY_API_SECRET")) {
+    console.error("Missing Cloudinary env variables");
+    process.exit(1);
+  }
+}
+
+async function connectDatabaseWithTimeout(ensurePrismaConnection: () => Promise<void>) {
+  const timeoutPromise = new Promise<never>((_, reject) => {
+    setTimeout(() => reject(new Error(`Database connection timeout after ${DB_CONNECT_TIMEOUT_MS}ms`)), DB_CONNECT_TIMEOUT_MS);
+  });
+
+  try {
+    console.log(`Connecting to database (timeout ${DB_CONNECT_TIMEOUT_MS}ms)...`);
+    await Promise.race([ensurePrismaConnection(), timeoutPromise]);
+    console.log("Database connection established");
+  } catch (error) {
+    console.error("Database connection failed:", error);
+  }
+}
 
 async function bootstrap() {
+  registerGlobalErrorHandlers();
+  loadEnvironmentFiles();
+  logStartupContext();
+  validateCloudinaryOrExit();
+
   if (!process.env.APP_VERSION || !process.env.APP_VERSION.trim()) {
     process.env.APP_VERSION = BUILD_COMMIT_SHA;
   }
 
-  ensureCloudinaryConfigured();
-  await ensurePrismaConnection();
+  const PORT = process.env.PORT || 3000;
+  const { app } = await import("./app.js");
+  const { ensurePrismaConnection } = await import("./services/prisma.js");
 
-  app.listen(port, host, () => {
-    console.log(`API listening on http://${host}:${port}`);
+  app.listen(Number(PORT), () => {
+    console.log(`Server running on ${PORT}`);
   });
+
+  void connectDatabaseWithTimeout(ensurePrismaConnection);
 }
 
 bootstrap().catch((error) => {

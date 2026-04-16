@@ -61,6 +61,10 @@ app.get("/", (_req, res) => {
   res.send("API is running");
 });
 
+app.get("/health", (_req, res) => {
+  res.status(200).send("OK");
+});
+
 app.get("/api", (_req, res) => {
   res.json({ message: "API working" });
 });
