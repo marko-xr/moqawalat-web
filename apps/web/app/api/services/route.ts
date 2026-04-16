@@ -1,7 +1,7 @@
 import { cookies } from "next/headers";
 import { NextResponse } from "next/server";
 import { isValidImageUrl, sanitizeImageList } from "@/lib/media";
-import { resolveServiceMedia as resolveServiceMediaFallback } from "@/lib/service-media-fallback";
+import { resolveServiceMedia } from "@/lib/service-media-fallback";
 
 function resolveApiBaseUrl() {
   const raw = (process.env.API_URL || process.env.NEXT_PUBLIC_API_URL || "http://localhost:4000/api").trim();
@@ -73,9 +73,9 @@ function normalizeMediaUrl(value?: string | null) {
 }
 
 function normalizeMediaList(value: unknown): string[] {
-  const normalized = sanitizeImageList(value, { allowPlaceholders: true })
+  const normalized = sanitizeImageList(value, { allowPlaceholders: false })
     .map((item) => normalizeMediaUrl(item) || item)
-    .filter((item): item is string => isValidImageUrl(item, { allowPlaceholders: true }));
+    .filter((item): item is string => isValidImageUrl(item, { allowPlaceholders: false }));
 
   return Array.from(new Set(normalized));
 }
@@ -122,7 +122,7 @@ export async function GET(request: Request) {
     }>;
 
     const normalized = items.map((item) =>
-      resolveServiceMediaFallback({
+      resolveServiceMedia({
         ...item,
         imageUrl: normalizeMediaUrl(item.imageUrl),
         coverImage: normalizeMediaUrl(item.coverImage),
@@ -165,7 +165,7 @@ export async function GET(request: Request) {
   }>;
 
   const normalized = items.map((item) =>
-    resolveServiceMediaFallback({
+    resolveServiceMedia({
       ...item,
       imageUrl: normalizeMediaUrl(item.imageUrl),
       coverImage: normalizeMediaUrl(item.coverImage),

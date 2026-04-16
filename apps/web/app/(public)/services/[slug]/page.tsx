@@ -42,9 +42,13 @@ export default async function ServiceDetails({ params }: { params: Promise<{ slu
 
   const media = resolveServiceMedia(service);
   const gallery: string[] = sanitizeImageList(media.gallery, { allowPlaceholders: false });
-  const cover = pickFirstImage([media.coverImage, media.imageUrl], { allowPlaceholders: false }) || media.gallery[0];
+  const cover = pickFirstImage([media.coverImage, media.imageUrl], { allowPlaceholders: false }) || media.gallery[0] || null;
   const galleryDescriptions: string[] = Array.isArray(service.galleryDescriptions) ? service.galleryDescriptions : [];
   const videoUrl = service.videoUrl || "";
+
+  if (!cover) {
+    throw new Error(`MISSING_SERVICE_COVER_IMAGE:${service.slug}`);
+  }
 
   if (process.env.NODE_ENV !== "production") {
     console.log("FRONTEND SERVICE DATA", service);
@@ -130,7 +134,6 @@ export default async function ServiceDetails({ params }: { params: Promise<{ slu
               sizes="(max-width: 1024px) 100vw, 50vw"
               quality={90}
               priority
-              fallbackSrc="/images/services/default-01.svg"
               errorContext={`service-hero:${service.slug}`}
             />
           </div>
@@ -158,7 +161,6 @@ export default async function ServiceDetails({ params }: { params: Promise<{ slu
                         sizes="(max-width: 768px) 100vw, 50vw"
                         quality={84}
                         loading="lazy"
-                        fallbackSrc="/images/services/default-01.svg"
                         errorContext={`service-gallery:${service.slug}`}
                       />
                     </div>

@@ -317,7 +317,7 @@ export default function AdminBlogPage() {
                 setRemoveCoverImage(false);
                 setForm((current) => ({ ...current, coverImage: event.target.value }));
               }}
-              placeholder="https:// أو /uploads/..."
+              placeholder="https://res.cloudinary.com/..."
             />
           </div>
 

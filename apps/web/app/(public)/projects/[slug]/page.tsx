@@ -36,9 +36,13 @@ export default async function ProjectDetails({ params }: { params: Promise<{ slu
     notFound();
   }
 
-  const cover = project.coverImage || project.afterImage || project.beforeImage || "/images/placeholder-after.svg";
+  const cover = project.coverImage || project.afterImage || project.beforeImage || null;
   const gallery: string[] = project.gallery || [];
   const videoUrl = project.videoUrl || "";
+
+  if (!cover) {
+    throw new Error(`MISSING_PROJECT_COVER_IMAGE:${project.slug}`);
+  }
 
   let embedUrl = "";
   let isVideoFile = false;

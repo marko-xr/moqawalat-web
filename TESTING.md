@@ -24,10 +24,9 @@
 - `npm run build --workspace @moqawalat/api`
 - `npm run build --workspace @moqawalat/web`
 
-## Cloudinary Migration Verification
-- `npm run migrate:cloudinary-uploads:dry`
-- `npm run migrate:cloudinary-uploads`
-- [ ] Migration summary shows zero remaining `/uploads` references (or only logged missing-file failures)
+## Cloudinary Media Verification
+- `npm run cleanup:images`
+- [ ] Database contains Cloudinary URLs only for media fields
 
 ## Security Verification
 - [ ] Protected endpoints return 401 without token

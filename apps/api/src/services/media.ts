@@ -1,4 +1,13 @@
-const cloudinarySecureUrlPattern = /^https:\/\/res\.cloudinary\.com\/.+/i;
+const CLOUDINARY_SECURE_PREFIX = "https://res.cloudinary.com/";
+
+export function isCloudinarySecureUrl(value: unknown): value is string {
+  if (typeof value !== "string") {
+    return false;
+  }
+
+  const normalized = value.trim();
+  return normalized.startsWith(CLOUDINARY_SECURE_PREFIX);
+}
 
 function flattenStringLike(value: unknown): string[] {
   if (value === undefined || value === null) {
@@ -29,12 +38,7 @@ function flattenStringLike(value: unknown): string[] {
     // Not JSON, continue with plain-text parsing.
   }
 
-  const shouldSplitByComma =
-    trimmed.includes(",") &&
-    !trimmed.startsWith("http://") &&
-    !trimmed.startsWith("https://") &&
-    !trimmed.startsWith("/uploads/") &&
-    !trimmed.startsWith("uploads/");
+  const shouldSplitByComma = trimmed.includes(",") && !trimmed.startsWith("http://") && !trimmed.startsWith("https://");
 
   if (shouldSplitByComma) {
     return trimmed
@@ -68,19 +72,16 @@ function toBoolean(value: unknown): boolean | undefined {
 }
 
 function extractCloudinaryUrl(file: Express.Multer.File): string {
-  const candidate =
-    (file as Express.Multer.File & { secure_url?: string; url?: string }).secure_url ||
-    (file as Express.Multer.File & { secure_url?: string; url?: string }).url ||
-    file.path;
+  const candidate = (file as Express.Multer.File & { secure_url?: string }).secure_url || file.path;
 
   if (typeof candidate !== "string") {
-    throw new Error("Upload failed: Cloudinary URL was not returned.");
+    throw new Error("INVALID_UPLOAD_URL");
   }
 
   const normalized = candidate.trim();
 
-  if (!cloudinarySecureUrlPattern.test(normalized)) {
-    throw new Error("Upload failed: invalid Cloudinary secure URL.");
+  if (!isCloudinarySecureUrl(normalized)) {
+    throw new Error("INVALID_UPLOAD_URL");
   }
 
   return normalized;

@@ -51,7 +51,7 @@ const defaultModel: IronWorksPageModel = {
     "سواتر حديد مشغول ومودرن للخصوصية والأمان.",
     "تفصيل سلالم طوارئ وسلالم داخلية بتصاميم عصرية."
   ],
-  heroImage: "/images/placeholder-before.svg",
+  heroImage: "",
   trustItems: [
     {
       title: "حديد عالي الجودة",

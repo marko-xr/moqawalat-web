@@ -1,6 +1,6 @@
 import type { ServiceSeoPage } from "@/lib/types";
 import { isValidImageUrl, pickFirstImage, sanitizeImageList } from "@/lib/media";
-import { resolveServiceMedia as resolveServiceMediaFallback } from "@/lib/service-media-fallback";
+import { resolveServiceMedia } from "@/lib/service-media-fallback";
 
 function resolveApiBaseUrl() {
   const raw = (process.env.API_URL || process.env.NEXT_PUBLIC_API_URL || "http://localhost:4000/api").trim();
@@ -16,52 +16,6 @@ function resolveApiBaseUrl() {
 const API_URL = resolveApiBaseUrl();
 const REQUEST_TIMEOUT_MS = 8000;
 const DEFAULT_REVALIDATE_SECONDS = 300;
-
-const DEFAULT_SERVICES_FALLBACK = [
-  {
-    id: "fallback-painting-services",
-    titleAr: "خدمات الدهانات الداخلية والخارجية",
-    slug: "painting-services",
-    shortDescAr: "تنفيذ دهانات احترافية للمنازل والفلل والمباني التجارية.",
-    contentAr:
-      "نقدم حلول دهان متكاملة باستخدام أفضل المواد المقاومة للرطوبة والحرارة مع تشطيبات عالية الجودة تناسب المناخ في المنطقة الشرقية.",
-    seoTitleAr: "خدمات دهان بالدمام | مقاول دهانات محترف",
-    seoDescriptionAr: "أفضل خدمات الدهانات الداخلية والخارجية في الدمام والخبر والظهران بأسعار تنافسية.",
-    isPublished: true
-  },
-  {
-    id: "fallback-roof-insulation",
-    titleAr: "عزل الأسطح",
-    slug: "roof-insulation",
-    shortDescAr: "عزل مائي وحراري احترافي لحماية المباني من التسربات.",
-    contentAr:
-      "نوفر عزل اسطح باستخدام مواد معتمدة تمنع تسرب المياه وتقلل استهلاك الطاقة. حلول مناسبة للمنازل والمستودعات والمنشآت التجارية.",
-    seoTitleAr: "عزل أسطح في الدمام | عزل مائي وحراري",
-    seoDescriptionAr: "شركة عزل أسطح بالدمام تقدم حلول عزل مائي وحراري بضمان وجودة عالية.",
-    isPublished: true
-  },
-  {
-    id: "fallback-metal-works",
-    titleAr: "الأعمال الحديدية",
-    slug: "metal-works",
-    shortDescAr: "تصميم وتنفيذ مظلات وهناجر وسواتر وأسوار حديد.",
-    contentAr:
-      "فريقنا ينفذ جميع أعمال الحديد حسب الطلب، من المظلات والهناجر إلى البوابات والأسوار مع تشطيب مقاوم للعوامل الجوية.",
-    seoTitleAr: "مظلات وهناجر وسواتر حديد بالدمام",
-    seoDescriptionAr: "تنفيذ أعمال الحديد في المنطقة الشرقية: مظلات، هناجر، سواتر، أسوار بجودة عالية.",
-    isPublished: true
-  },
-  {
-    id: "fallback-gypsum-decorations",
-    titleAr: "الجبس والديكورات",
-    slug: "gypsum-decorations",
-    shortDescAr: "ديكورات جبسية عصرية وأسقف مستعارة وتشطيبات داخلية.",
-    contentAr: "نصمم حلول جبس وديكور تعكس ذوقك، مع تنفيذ دقيق وتشطيبات فاخرة للمنازل والمكاتب والمعارض.",
-    seoTitleAr: "ديكورات جبس بالدمام | تصميم وتنفيذ",
-    seoDescriptionAr: "أعمال جبس وديكور داخلية بالدمام والخبر والظهران بتصاميم حديثة وأسعار مناسبة.",
-    isPublished: true
-  }
-];
 
 type NextFetchInit = RequestInit & {
   next?: {
@@ -79,9 +33,9 @@ function normalizeMediaUrl(value?: string | null) {
 }
 
 function normalizeMediaList(value: unknown): string[] {
-  const normalized = sanitizeImageList(value, { allowPlaceholders: true })
+  const normalized = sanitizeImageList(value, { allowPlaceholders: false })
     .map((item) => normalizeMediaUrl(item) || item)
-    .filter((item): item is string => isValidImageUrl(item, { allowPlaceholders: true }));
+    .filter((item): item is string => isValidImageUrl(item, { allowPlaceholders: false }));
 
   return Array.from(new Set(normalized));
 }
@@ -94,7 +48,7 @@ function normalizeService(service: any) {
     gallery: normalizeMediaList(service?.gallery)
   };
 
-  return resolveServiceMediaFallback(normalized);
+  return resolveServiceMedia(normalized);
 }
 
 function normalizeProject(project: any) {
@@ -169,12 +123,12 @@ export async function getServices() {
   try {
     const services = await request<any[]>("/services");
     if (!Array.isArray(services) || services.length === 0) {
-      return DEFAULT_SERVICES_FALLBACK.map((service) => normalizeService(service));
+      return [];
     }
 
     return services.map((service) => normalizeService(service));
   } catch {
-    return DEFAULT_SERVICES_FALLBACK.map((service) => normalizeService(service));
+    return [];
   }
 }
 
@@ -192,17 +146,7 @@ export async function getServiceBySlug(slug: string) {
 
     return normalized;
   } catch {
-    const fallback = DEFAULT_SERVICES_FALLBACK.find((service) => service.slug === slug);
-    const normalized = fallback ? normalizeService(fallback) : null;
-
-    if (process.env.NODE_ENV !== "production") {
-      console.log("[service] by-slug fallback", slug, {
-        coverImage: normalized?.coverImage || normalized?.imageUrl || null,
-        galleryCount: Array.isArray(normalized?.gallery) ? normalized.gallery.length : 0
-      });
-    }
-
-    return normalized;
+    return null;
   }
 }
 

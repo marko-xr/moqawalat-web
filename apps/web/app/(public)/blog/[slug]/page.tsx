@@ -50,12 +50,16 @@ export default async function BlogDetails({ params }: { params: Promise<{ slug: 
     notFound();
   }
 
+  if (!post.coverImage) {
+    throw new Error(`MISSING_BLOG_COVER_IMAGE:${post.slug}`);
+  }
+
   return (
     <section className="section">
       <div className="container card">
         <div className="blog-article-cover">
           <Image
-            src={post.coverImage || "/images/main-image.webp"}
+            src={post.coverImage}
             alt={post.titleAr}
             width={1400}
             height={900}

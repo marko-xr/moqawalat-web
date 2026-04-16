@@ -18,6 +18,7 @@ type CleanupStats = {
 };
 
 const CLOUDINARY_PREFIX = "https://res.cloudinary.com/";
+const SEO_SECTION_IMAGE_KEYS = ["heroImage", "beforeImage", "afterImage"] as const;
 
 initializeDatabaseRuntime({ runtime: "script", source: "scripts/cleanupBrokenImages.ts" });
 
@@ -40,18 +41,6 @@ function isInvalidImageUrl(value: string): boolean {
 
   if (!normalized) {
     return true;
-  }
-
-  if (normalized.startsWith("/uploads/") || normalized.startsWith("uploads/")) {
-    return false;
-  }
-
-  if (normalized.startsWith("/images/services/")) {
-    return false;
-  }
-
-  if (normalized.startsWith("http://") || normalized.startsWith("https://")) {
-    return false;
   }
 
   return !normalized.startsWith(CLOUDINARY_PREFIX);
@@ -87,6 +76,43 @@ function cleanImageArray(values: string[]): { nextValue: string[]; scanned: numb
   });
 
   return { nextValue, scanned: values.length, cleaned };
+}
+
+function cleanServiceSeoContentSections(value: unknown): {
+  nextValue: Record<string, unknown>;
+  scanned: number;
+  cleaned: number;
+  cleanedFields: string[];
+} {
+  const base = value && typeof value === "object" && !Array.isArray(value) ? { ...(value as Record<string, unknown>) } : {};
+
+  let scanned = 0;
+  let cleaned = 0;
+  const cleanedFields: string[] = [];
+
+  for (const key of SEO_SECTION_IMAGE_KEYS) {
+    const current = base[key];
+
+    if (typeof current !== "string") {
+      continue;
+    }
+
+    const result = cleanSingleImage(current);
+    scanned += result.scanned;
+
+    if (result.cleaned > 0) {
+      base[key] = null;
+      cleaned += result.cleaned;
+      cleanedFields.push(`contentSections.${key}`);
+    }
+  }
+
+  return {
+    nextValue: base,
+    scanned,
+    cleaned,
+    cleanedFields
+  };
 }
 
 async function main() {
@@ -161,7 +187,8 @@ async function main() {
   const serviceSeoPages = await prisma.serviceSeoPage.findMany({
     select: {
       id: true,
-      images: true
+      images: true,
+      contentSections: true
     }
   });
 
@@ -169,26 +196,43 @@ async function main() {
 
   for (const page of serviceSeoPages) {
     const images = cleanImageArray(page.images);
-    stats.totalImageValuesScanned += images.scanned;
+    const sections = cleanServiceSeoContentSections(page.contentSections);
+    stats.totalImageValuesScanned += images.scanned + sections.scanned;
 
-    if (images.cleaned === 0) {
+    const cleanedFields: string[] = [];
+    let cleanedUrlCount = 0;
+
+    if (images.cleaned > 0) {
+      cleanedFields.push("images");
+      cleanedUrlCount += images.cleaned;
+    }
+
+    if (sections.cleaned > 0) {
+      cleanedFields.push(...sections.cleanedFields);
+      cleanedUrlCount += sections.cleaned;
+    }
+
+    if (cleanedUrlCount === 0) {
       continue;
     }
 
-    stats.totalCleanedUrls += images.cleaned;
+    stats.totalCleanedUrls += cleanedUrlCount;
 
     if (!dryRun) {
       await prisma.serviceSeoPage.update({
         where: { id: page.id },
-        data: { images: images.nextValue }
+        data: {
+          images: images.nextValue,
+          contentSections: sections.nextValue
+        }
       });
     }
 
     stats.affectedRecords.push({
       model: "service_seo",
       id: page.id,
-      cleanedFields: ["images"],
-      cleanedUrlCount: images.cleaned
+      cleanedFields,
+      cleanedUrlCount
     });
   }
 

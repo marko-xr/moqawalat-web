@@ -47,14 +47,24 @@ export default async function BlogPage() {
             {posts.map((post) => (
               <article key={post.id} className="card blog-post-card">
                 <div className="blog-card-media">
+                  {(() => {
+                    const coverImage = post.coverImage;
+
+                    if (!coverImage) {
+                      throw new Error(`MISSING_BLOG_COVER_IMAGE:${post.slug}`);
+                    }
+
+                    return (
                   <Image
-                    src={post.coverImage || "/images/main-image.webp"}
+                    src={coverImage}
                     alt={post.titleAr}
                     width={1200}
                     height={720}
                     className="img-full"
                     sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw"
                   />
+                    );
+                  })()}
                 </div>
                 <h3>{post.titleAr}</h3>
                 <p>{post.excerptAr}</p>

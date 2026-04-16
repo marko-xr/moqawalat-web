@@ -49,7 +49,7 @@ const defaultModel: GypsumPageModel = {
     "تشطيبات داخلية فاخرة مع عناية بالتفاصيل.",
     "تنسيق احترافي للإضاءة والديكور النهائي."
   ],
-  heroImage: "/images/placeholder-before.svg",
+  heroImage: "",
   trustItems: [
     {
       title: "دقة تشطيب عالية",

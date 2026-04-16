@@ -19,9 +19,13 @@ export default function Hero({
   lead =
     "إذا كنت تعاني من تسرب المياه أو ارتفاع حرارة السطح، نقدم لك حلول عزل مائي وحراري احترافية بضمان واضح ومعاينة سريعة داخل الدمام والخبر والظهران والقطيف.",
   points = defaultPoints,
-  imageSrc = "/images/placeholder-before.svg",
+  imageSrc,
   imageAlt = "عزل اسطح فوم في الدمام"
 }: HeroProps) {
+  if (!imageSrc) {
+    throw new Error("MISSING_ROOF_HERO_IMAGE");
+  }
+
   return (
     <section className="roof-hero" aria-labelledby="roof-insulation-title">
       <div className="roof-hero-content">

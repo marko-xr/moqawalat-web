@@ -50,7 +50,7 @@ const defaultModel: RoofPageModel = {
     "مواد عزل معتمدة مناسبة لأجواء المنطقة الشرقية.",
     "تنفيذ سريع ونظيف مع التزام كامل بالجودة."
   ],
-  heroImage: "/images/placeholder-before.svg",
+  heroImage: "",
   trustItems: [
     {
       title: "خبرة ميدانية في المنطقة الشرقية",

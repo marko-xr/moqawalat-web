@@ -50,7 +50,7 @@ const defaultModel: PaintingPageModel = {
     "مواد مقاومة للرطوبة والحرارة مناسبة لمناخ الشرقية.",
     "تنفيذ سريع ونظيف للمنازل والفلل والمنشآت التجارية."
   ],
-  heroImage: "/images/placeholder-before.svg",
+  heroImage: "",
   trustItems: [
     {
       title: "مواد أصلية عالية الجودة",

@@ -1,18 +1,12 @@
-const PLACEHOLDER_IMAGES = [
-  "/images/placeholder-before.svg",
-  "/images/placeholder-after.svg"
-] as const;
+const CLOUDINARY_SECURE_PREFIX = "https://res.cloudinary.com/";
 
 type SanitizeOptions = {
   allowPlaceholders?: boolean;
 };
 
-function isPlaceholderImage(value: string) {
-  const normalized = value.trim().toLowerCase();
-  return PLACEHOLDER_IMAGES.some((item) => normalized.includes(item));
-}
-
 export function isValidImageUrl(value: unknown, options: SanitizeOptions = {}): value is string {
+  void options;
+
   if (typeof value !== "string") {
     return false;
   }
@@ -22,28 +16,7 @@ export function isValidImageUrl(value: unknown, options: SanitizeOptions = {}): 
     return false;
   }
 
-  if (!options.allowPlaceholders && isPlaceholderImage(trimmed)) {
-    return false;
-  }
-
-  if (trimmed.startsWith("data:image/")) {
-    return true;
-  }
-
-  if (
-    trimmed.startsWith("/images/") ||
-    trimmed.startsWith("/_next/") ||
-    (trimmed.startsWith("/") && !trimmed.startsWith("/uploads/"))
-  ) {
-    return true;
-  }
-
-  try {
-    const parsed = new URL(trimmed);
-    return (parsed.protocol === "http:" || parsed.protocol === "https:") && !parsed.pathname.startsWith("/uploads/");
-  } catch {
-    return false;
-  }
+  return trimmed.startsWith(CLOUDINARY_SECURE_PREFIX);
 }
 
 function flattenImageTokens(value: unknown): string[] {

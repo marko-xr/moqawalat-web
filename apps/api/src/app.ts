@@ -70,7 +70,11 @@ app.get("/api/health", (_req, res) => {
     ok: true,
     service: "moqawalat-api",
     version: process.env.APP_VERSION || "no-version",
-    cloudinaryConfigured: Boolean(process.env.CLOUDINARY_CLOUD_NAME)
+    cloudinaryConfigured: Boolean(
+      process.env.CLOUDINARY_CLOUD_NAME?.trim() &&
+        process.env.CLOUDINARY_API_KEY?.trim() &&
+        process.env.CLOUDINARY_API_SECRET?.trim()
+    )
   });
 });
 
@@ -126,6 +130,13 @@ app.use((err: Error, _req: express.Request, res: express.Response, _next: expres
     return res.status(500).json({
       message: "Cloudinary configuration is missing on the server.",
       code: "CLOUDINARY_NOT_CONFIGURED"
+    });
+  }
+
+  if (err.message === "INVALID_UPLOAD_URL") {
+    return res.status(422).json({
+      message: "Uploaded media URL is invalid. Expected a Cloudinary secure URL.",
+      code: "INVALID_UPLOAD_URL"
     });
   }
 

@@ -5,6 +5,4 @@ node_modules
 .next
 dist
 coverage
-uploads
-apps/api/uploads/*
-!apps/api/uploads/.gitkeep
+apps/api/api.log

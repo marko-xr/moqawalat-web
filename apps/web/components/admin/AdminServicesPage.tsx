@@ -62,7 +62,7 @@ function formatDate(value?: string) {
 
 function hasRealImage(item: Service): boolean {
   const cover = item.coverImage || item.imageUrl || "";
-  return /^https?:\/\//.test(cover);
+  return cover.startsWith("https://res.cloudinary.com/");
 }
 
 type ApiValidationError = {
@@ -368,7 +368,7 @@ export default function AdminServicesPage() {
   }
 
   function handleEdit(item: Service) {
-    const normalizedGallery = sanitizeImageList(item.gallery, { allowPlaceholders: true });
+    const normalizedGallery = sanitizeImageList(item.gallery, { allowPlaceholders: false });
     const existingDescriptions = Array.isArray(item.galleryDescriptions)
       ? item.galleryDescriptions.map((entry) => String(entry || ""))
       : [];

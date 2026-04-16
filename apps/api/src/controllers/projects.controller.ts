@@ -1,7 +1,7 @@
 import type { Request, Response } from "express";
 import { body } from "express-validator";
 import { prisma } from "../services/prisma.js";
-import { parseBoolean, parseGallery, uploadMediaFile, uploadMediaFiles } from "../services/media.js";
+import { isCloudinarySecureUrl, parseBoolean, parseGallery, uploadMediaFile, uploadMediaFiles } from "../services/media.js";
 
 const slugPattern = /^[a-z0-9]+(?:-[a-z0-9]+)*$/;
 
@@ -22,6 +22,19 @@ function isOptionalValidUrl(value: unknown) {
   } catch {
     return false;
   }
+}
+
+function isOptionalCloudinaryImageUrl(value: unknown) {
+  if (value === undefined || value === null) {
+    return true;
+  }
+
+  const raw = String(value).trim();
+  if (!raw) {
+    return true;
+  }
+
+  return isCloudinarySecureUrl(raw);
 }
 
 function toSlug(value: string) {
@@ -55,6 +68,9 @@ export const projectCreateValidation = [
   body("descriptionAr").isLength({ min: 20 }),
   body("seoTitleAr").optional().isString().isLength({ max: 160 }),
   body("seoDescriptionAr").optional().isString().isLength({ max: 300 }),
+  body("coverImage").custom((value) => isOptionalCloudinaryImageUrl(value)).withMessage("coverImage must be a Cloudinary URL"),
+  body("beforeImage").custom((value) => isOptionalCloudinaryImageUrl(value)).withMessage("beforeImage must be a Cloudinary URL"),
+  body("afterImage").custom((value) => isOptionalCloudinaryImageUrl(value)).withMessage("afterImage must be a Cloudinary URL"),
   body("videoUrl").custom((value) => isOptionalValidUrl(value)).withMessage("Invalid video URL"),
   body("isPublished").optional().isBoolean().toBoolean()
 ];
@@ -80,6 +96,9 @@ export const projectUpdateValidation = [
   body("descriptionAr").optional().isLength({ min: 20 }),
   body("seoTitleAr").optional().isString().isLength({ max: 160 }),
   body("seoDescriptionAr").optional().isString().isLength({ max: 300 }),
+  body("coverImage").custom((value) => isOptionalCloudinaryImageUrl(value)).withMessage("coverImage must be a Cloudinary URL"),
+  body("beforeImage").custom((value) => isOptionalCloudinaryImageUrl(value)).withMessage("beforeImage must be a Cloudinary URL"),
+  body("afterImage").custom((value) => isOptionalCloudinaryImageUrl(value)).withMessage("afterImage must be a Cloudinary URL"),
   body("videoUrl").custom((value) => isOptionalValidUrl(value)).withMessage("Invalid video URL"),
   body("isPublished").optional().isBoolean().toBoolean()
 ];
@@ -120,13 +139,40 @@ export async function createProject(req: Request, res: Response) {
   const beforeFile = files?.beforeImage?.[0];
   const afterFile = files?.afterImage?.[0];
 
+  const rawCoverImage = typeof req.body.coverImage === "string" ? req.body.coverImage.trim() : "";
+  const rawBeforeImage = typeof req.body.beforeImage === "string" ? req.body.beforeImage.trim() : "";
+  const rawAfterImage = typeof req.body.afterImage === "string" ? req.body.afterImage.trim() : "";
+  const inputGallery = parseGallery(req.body.gallery)
+    .map((item) => String(item || "").trim())
+    .filter(Boolean);
+
+  const invalidGalleryItems = inputGallery.filter((item) => !isCloudinarySecureUrl(item));
+  if (invalidGalleryItems.length > 0) {
+    return res.status(422).json({
+      message: "Gallery contains non-Cloudinary image URLs.",
+      code: "PROJECT_INVALID_GALLERY_URLS"
+    });
+  }
+
+  if (rawCoverImage && !isCloudinarySecureUrl(rawCoverImage)) {
+    return res.status(422).json({ message: "coverImage must be a Cloudinary URL.", code: "PROJECT_INVALID_COVER_URL" });
+  }
+
+  if (rawBeforeImage && !isCloudinarySecureUrl(rawBeforeImage)) {
+    return res.status(422).json({ message: "beforeImage must be a Cloudinary URL.", code: "PROJECT_INVALID_BEFORE_URL" });
+  }
+
+  if (rawAfterImage && !isCloudinarySecureUrl(rawAfterImage)) {
+    return res.status(422).json({ message: "afterImage must be a Cloudinary URL.", code: "PROJECT_INVALID_AFTER_URL" });
+  }
+
   const coverImage = await uploadMediaFile(coverFile, "moqawalat/projects");
   const uploadedGallery = await uploadMediaFiles(galleryFiles, "moqawalat/projects");
   const uploadedVideo = await uploadMediaFile(videoFile, "moqawalat/projects");
   const beforeImage = await uploadMediaFile(beforeFile, "moqawalat/projects");
   const afterImage = await uploadMediaFile(afterFile, "moqawalat/projects");
 
-  const gallery = [...parseGallery(req.body.gallery), ...uploadedGallery];
+  const gallery = [...inputGallery, ...uploadedGallery];
   const normalizedInputSlug = toSlug(String(req.body.slug || ""));
   const rawSlug = normalizedInputSlug || toSlug(String(req.body.titleAr || ""));
   const slug = rawSlug || `project-${Date.now()}`;
@@ -138,9 +184,9 @@ export async function createProject(req: Request, res: Response) {
       locationAr: req.body.locationAr,
       categoryAr: req.body.categoryAr,
       descriptionAr: req.body.descriptionAr,
-      beforeImage: beforeImage || req.body.beforeImage || null,
-      afterImage: afterImage || req.body.afterImage || null,
-      coverImage: coverImage || req.body.coverImage || null,
+      beforeImage: beforeImage || rawBeforeImage || null,
+      afterImage: afterImage || rawAfterImage || null,
+      coverImage: coverImage || rawCoverImage || null,
       gallery,
       videoUrl: uploadedVideo || req.body.videoUrl || null,
       seoTitleAr: req.body.seoTitleAr || null,
@@ -160,17 +206,44 @@ export async function updateProject(req: Request, res: Response) {
   const beforeFile = files?.beforeImage?.[0];
   const afterFile = files?.afterImage?.[0];
 
+  const rawCoverImage = typeof req.body.coverImage === "string" ? req.body.coverImage.trim() : "";
+  const rawBeforeImage = typeof req.body.beforeImage === "string" ? req.body.beforeImage.trim() : "";
+  const rawAfterImage = typeof req.body.afterImage === "string" ? req.body.afterImage.trim() : "";
+  const inputGallery = parseGallery(req.body.gallery)
+    .map((item) => String(item || "").trim())
+    .filter(Boolean);
+
+  const invalidGalleryItems = inputGallery.filter((item) => !isCloudinarySecureUrl(item));
+  if (invalidGalleryItems.length > 0) {
+    return res.status(422).json({
+      message: "Gallery contains non-Cloudinary image URLs.",
+      code: "PROJECT_INVALID_GALLERY_URLS"
+    });
+  }
+
+  if (rawCoverImage && !isCloudinarySecureUrl(rawCoverImage)) {
+    return res.status(422).json({ message: "coverImage must be a Cloudinary URL.", code: "PROJECT_INVALID_COVER_URL" });
+  }
+
+  if (rawBeforeImage && !isCloudinarySecureUrl(rawBeforeImage)) {
+    return res.status(422).json({ message: "beforeImage must be a Cloudinary URL.", code: "PROJECT_INVALID_BEFORE_URL" });
+  }
+
+  if (rawAfterImage && !isCloudinarySecureUrl(rawAfterImage)) {
+    return res.status(422).json({ message: "afterImage must be a Cloudinary URL.", code: "PROJECT_INVALID_AFTER_URL" });
+  }
+
   const coverImage = await uploadMediaFile(coverFile, "moqawalat/projects");
   const uploadedGallery = await uploadMediaFiles(galleryFiles, "moqawalat/projects");
   const uploadedVideo = await uploadMediaFile(videoFile, "moqawalat/projects");
   const beforeImage = await uploadMediaFile(beforeFile, "moqawalat/projects");
   const afterImage = await uploadMediaFile(afterFile, "moqawalat/projects");
 
-  const gallery = [...parseGallery(req.body.gallery), ...uploadedGallery];
+  const gallery = [...inputGallery, ...uploadedGallery];
   const isPublished = parseBoolean(req.body.isPublished);
-  const coverValue = coverImage || (typeof req.body.coverImage === "string" && req.body.coverImage.length > 0 ? req.body.coverImage : undefined);
-  const beforeValue = beforeImage || (typeof req.body.beforeImage === "string" && req.body.beforeImage.length > 0 ? req.body.beforeImage : undefined);
-  const afterValue = afterImage || (typeof req.body.afterImage === "string" && req.body.afterImage.length > 0 ? req.body.afterImage : undefined);
+  const coverValue = coverImage || (rawCoverImage ? rawCoverImage : undefined);
+  const beforeValue = beforeImage || (rawBeforeImage ? rawBeforeImage : undefined);
+  const afterValue = afterImage || (rawAfterImage ? rawAfterImage : undefined);
   const videoValue = uploadedVideo || (typeof req.body.videoUrl === "string" && req.body.videoUrl.length > 0 ? req.body.videoUrl : undefined);
 
     const normalizedUpdateSlug = toSlug(String(req.body.slug || ""));

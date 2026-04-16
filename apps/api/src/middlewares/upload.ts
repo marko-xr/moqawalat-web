@@ -20,7 +20,7 @@ function resolveUploadFolder(baseUrl: string): string {
     }
   }
 
-  return "moqawalat/uploads";
+  return "moqawalat/misc";
 }
 
 ensureCloudinaryConfigured();

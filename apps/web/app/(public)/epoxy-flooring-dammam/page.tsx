@@ -51,7 +51,7 @@ const defaultModel: EpoxyPageModel = {
     "عزل خزانات المياه بإيبوكسي Food Grade المعتمد لمياه الشرب.",
     "أرضيات مقاومة للمواد الكيميائية والمياه والزيوت للمصانع والمغاسل."
   ],
-  heroImage: "/images/placeholder-before.svg",
+  heroImage: "",
   trustItems: [
     {
       title: "خامات إيبوكسي عالمية",

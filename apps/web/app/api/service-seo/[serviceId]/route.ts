@@ -43,9 +43,9 @@ function normalizeMediaUrl(value?: string | null) {
 }
 
 function normalizeMediaList(value: unknown): string[] {
-  const normalized = sanitizeImageList(value, { allowPlaceholders: true })
+  const normalized = sanitizeImageList(value, { allowPlaceholders: false })
     .map((item) => normalizeMediaUrl(item) || item)
-    .filter((item): item is string => isValidImageUrl(item, { allowPlaceholders: true }));
+    .filter((item): item is string => isValidImageUrl(item, { allowPlaceholders: false }));
 
   return Array.from(new Set(normalized));
 }

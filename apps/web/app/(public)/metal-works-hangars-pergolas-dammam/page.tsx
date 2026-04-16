@@ -51,7 +51,7 @@ const defaultModel: MetalWorksPageModel = {
     "برجولات حديد مودرن للأسطح والحدائق بتصاميم جذابة.",
     "ورشة حدادة متكاملة لتفصيل الأبواب والأسوار والأسقف المعدنية."
   ],
-  heroImage: "/images/placeholder-before.svg",
+  heroImage: "",
   trustItems: [
     {
       title: "تنفيذ هندسي دقيق",

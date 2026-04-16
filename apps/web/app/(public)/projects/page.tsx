@@ -25,14 +25,24 @@ export default async function ProjectsPage() {
             <article key={project.id} className="card">
               <Link href={`/projects/${project.slug}`} className="project-card-link" prefetch={false}>
                 <div className="project-card-media">
+                  {(() => {
+                    const coverImage = project.coverImage || project.afterImage || project.beforeImage;
+
+                    if (!coverImage) {
+                      throw new Error(`MISSING_PROJECT_COVER_IMAGE:${project.slug}`);
+                    }
+
+                    return (
                   <Image
-                    src={project.coverImage || project.afterImage || project.beforeImage || "/images/placeholder-after.svg"}
+                    src={coverImage}
                     alt={project.titleAr}
                     className="img-full"
                     width={900}
                     height={600}
                     sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw"
                   />
+                    );
+                  })()}
                 </div>
                 <h3>{project.titleAr}</h3>
                 <p>{project.descriptionAr}</p>

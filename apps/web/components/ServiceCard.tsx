@@ -7,6 +7,10 @@ export default function ServiceCard({ service }: { service: Service }) {
   const media = resolveServiceMedia(service);
   const cover = media.coverImage;
 
+  if (!cover) {
+    throw new Error(`MISSING_SERVICE_COVER_IMAGE:${service.slug}`);
+  }
+
   return (
     <article className="card service-card">
       <div className="service-card-media">
@@ -18,7 +22,6 @@ export default function ServiceCard({ service }: { service: Service }) {
           sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw"
           quality={82}
           loading="lazy"
-          fallbackSrc="/images/services/default-01.svg"
           errorContext={`service-card:${service.slug}`}
         />
       </div>

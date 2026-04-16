@@ -1,7 +1,7 @@
 import type { Request, Response } from "express";
 import { Prisma } from "@prisma/client";
 import { prisma } from "../services/prisma.js";
-import { parseBoolean, parseGallery, uploadMediaFile, uploadMediaFiles } from "../services/media.js";
+import { isCloudinarySecureUrl, parseBoolean, parseGallery, uploadMediaFile, uploadMediaFiles } from "../services/media.js";
 import { resolveServiceMedia } from "../services/service-media-fallback.js";
 
 type ContentSections = Prisma.JsonObject;
@@ -96,30 +96,7 @@ function isValidImageUrl(value: string) {
     return false;
   }
 
-  if (value.startsWith("data:image/")) {
-    return true;
-  }
-
-  if (
-    value.startsWith("/images/") ||
-    value.startsWith("/_next/") ||
-    (value.startsWith("/") && !value.startsWith("/uploads/")) ||
-    value.startsWith("http://") ||
-    value.startsWith("https://")
-  ) {
-    if (value.startsWith("http://") || value.startsWith("https://")) {
-      try {
-        const parsed = new URL(value);
-        return !parsed.pathname.startsWith("/uploads/");
-      } catch {
-        return false;
-      }
-    }
-
-    return true;
-  }
-
-  return false;
+  return isCloudinarySecureUrl(value);
 }
 
 function isPlaceholderImage(value: string) {

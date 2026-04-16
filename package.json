@@ -13,10 +13,7 @@
     "prisma:migrate": "prisma migrate dev",
     "prisma:seed": "tsx prisma/seed.ts",
     "cleanup:images": "tsx scripts/cleanupBrokenImages.ts",
-    "migrate:cloudinary-uploads": "tsx scripts/migrateUploadsToCloudinary.ts",
-    "migrate:cloudinary-uploads:dry": "tsx scripts/migrateUploadsToCloudinary.ts --dry-run",
-    "repair:service-images": "tsx scripts/repairServiceImages.ts",
-    "replace:service-fallback-images": "tsx scripts/replaceServiceFallbackImages.ts"
+    "repair:service-images": "tsx scripts/repairServiceImages.ts"
   },
   "prisma": {
     "seed": "tsx prisma/seed.ts"

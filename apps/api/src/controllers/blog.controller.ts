@@ -1,7 +1,7 @@
 import type { Request, Response } from "express";
 import { body } from "express-validator";
 import { prisma } from "../services/prisma.js";
-import { parseBoolean, uploadMediaFile } from "../services/media.js";
+import { isCloudinarySecureUrl, parseBoolean, uploadMediaFile } from "../services/media.js";
 
 function isOptionalValidUrl(value: unknown) {
   if (value === undefined || value === null) {
@@ -20,6 +20,19 @@ function isOptionalValidUrl(value: unknown) {
   } catch {
     return false;
   }
+}
+
+function isOptionalCloudinaryImageUrl(value: unknown) {
+  if (value === undefined || value === null) {
+    return true;
+  }
+
+  const raw = String(value).trim();
+  if (!raw) {
+    return true;
+  }
+
+  return isCloudinarySecureUrl(raw);
 }
 
 function toSlug(value: string) {
@@ -46,7 +59,7 @@ export const blogValidation = [
   body("contentAr").isLength({ min: 50 }),
   body("seoTitleAr").optional().isString().isLength({ max: 160 }),
   body("seoDescriptionAr").optional().isString().isLength({ max: 300 }),
-  body("coverImage").custom((value) => isOptionalValidUrl(value)).withMessage("Invalid cover image URL"),
+  body("coverImage").custom((value) => isOptionalCloudinaryImageUrl(value)).withMessage("Cover image must be a Cloudinary URL"),
   body("published").optional().isBoolean().toBoolean()
 ];
 
@@ -75,6 +88,15 @@ export async function createBlogPost(req: Request, res: Response) {
   const files = req.files as Record<string, Express.Multer.File[]> | undefined;
   const coverFile = files?.coverImage?.[0];
   const uploadedCover = await uploadMediaFile(coverFile, "moqawalat/blog");
+  const rawCoverImage = typeof req.body.coverImage === "string" ? req.body.coverImage.trim() : "";
+
+  if (rawCoverImage && !isCloudinarySecureUrl(rawCoverImage)) {
+    return res.status(422).json({
+      message: "Cover image must be a Cloudinary URL.",
+      code: "BLOG_INVALID_COVER_URL"
+    });
+  }
+
   const normalizedSlug = toSlug(String(req.body.slug || "")) || toSlug(String(req.body.titleAr || "")) || `blog-${Date.now()}`;
   const published = parseBoolean(req.body.published);
 
@@ -86,7 +108,7 @@ export async function createBlogPost(req: Request, res: Response) {
       contentAr: req.body.contentAr,
       seoTitleAr: req.body.seoTitleAr || null,
       seoDescriptionAr: req.body.seoDescriptionAr || null,
-      coverImage: uploadedCover || req.body.coverImage || null,
+      coverImage: uploadedCover || rawCoverImage || null,
       published: typeof published === "boolean" ? published : true
     }
   });
@@ -98,6 +120,15 @@ export async function updateBlogPost(req: Request, res: Response) {
   const files = req.files as Record<string, Express.Multer.File[]> | undefined;
   const coverFile = files?.coverImage?.[0];
   const uploadedCover = await uploadMediaFile(coverFile, "moqawalat/blog");
+  const rawCoverImage = typeof req.body.coverImage === "string" ? req.body.coverImage.trim() : "";
+
+  if (rawCoverImage && !isCloudinarySecureUrl(rawCoverImage)) {
+    return res.status(422).json({
+      message: "Cover image must be a Cloudinary URL.",
+      code: "BLOG_INVALID_COVER_URL"
+    });
+  }
+
   const published = parseBoolean(req.body.published);
   const removeCoverImage = parseBoolean(req.body.removeCoverImage) === true;
   const slug = toSlug(String(req.body.slug || ""));
@@ -113,7 +144,7 @@ export async function updateBlogPost(req: Request, res: Response) {
       seoDescriptionAr: req.body.seoDescriptionAr || null,
       coverImage: removeCoverImage
         ? null
-        : uploadedCover || (typeof req.body.coverImage === "string" ? req.body.coverImage.trim() || null : undefined),
+        : uploadedCover || (rawCoverImage ? rawCoverImage : undefined),
       published: typeof published === "boolean" ? published : undefined
     }
   });

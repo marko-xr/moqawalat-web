@@ -22,7 +22,6 @@ Moqawalat Web/
         services/
         app.ts
         server.ts
-      uploads/
       package.json
       tsconfig.json
       .env.example
@@ -154,7 +153,6 @@ npm run prisma:seed
 ### Run maintenance scripts safely
 ```bash
 npm run cleanup:images
-npm run migrate:cloudinary-uploads
 ```
 
 Notes:
@@ -332,6 +330,5 @@ Schema source: `prisma/schema.prisma`
 
 ## 14) Notes
 
-- Upload files are stored in `apps/api/uploads` and served via `/uploads/*`.
-- For production object storage (recommended): replace local uploads with S3/Azure Blob.
+- Uploads are Cloudinary-only and must always be stored as `https://res.cloudinary.com/...` URLs.
 - Keep `JWT_SECRET` strong and private.

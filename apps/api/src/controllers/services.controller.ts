@@ -5,7 +5,6 @@ import { prisma } from "../services/prisma.js";
 import { parseBoolean, parseGallery, uploadMediaFile, uploadMediaFiles } from "../services/media.js";
 import {
   collectInvalidImageUrls,
-  isServiceFallbackImage,
   isValidServiceImageUrl,
   resolveServiceMedia
 } from "../services/service-media-fallback.js";
@@ -81,7 +80,7 @@ type ServiceImageLogEntry = {
 };
 
 function hasRealServiceImage(values: Array<string | null | undefined>) {
-  return values.some((value) => isValidServiceImageUrl(value) && !isServiceFallbackImage(value));
+  return values.some((value) => isValidServiceImageUrl(value));
 }
 
 function logIncomingServiceImages(
