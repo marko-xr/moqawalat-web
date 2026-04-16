@@ -1,4 +1,5 @@
 import Image from "next/image";
+import { notFound } from "next/navigation";
 
 type HeroProps = {
   title?: string;
@@ -14,6 +15,10 @@ const defaultPoints = [
   "تنفيذ سريع ونظيف مع التزام كامل بالجودة."
 ];
 
+function hasValidCloudinaryImage(imageSrc: string | undefined): imageSrc is string {
+  return typeof imageSrc === "string" && imageSrc.startsWith("https://res.cloudinary.com/");
+}
+
 export default function Hero({
   title = "عزل أسطح بالدمام يحمي المبنى من التسربات والحرارة",
   lead =
@@ -22,8 +27,9 @@ export default function Hero({
   imageSrc,
   imageAlt = "عزل اسطح فوم في الدمام"
 }: HeroProps) {
-  if (!imageSrc) {
-    throw new Error("MISSING_ROOF_HERO_IMAGE");
+  if (!hasValidCloudinaryImage(imageSrc)) {
+    console.warn("Invalid roof hero image:", imageSrc ?? "(empty)");
+    return notFound();
   }
 
   return (

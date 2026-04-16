@@ -6,6 +6,10 @@ import { SEO_KEYWORDS } from "@/lib/seo";
 
 export const revalidate = 300;
 
+function hasValidCloudinaryCoverImage(coverImage: string | null | undefined): coverImage is string {
+  return typeof coverImage === "string" && coverImage.startsWith("https://res.cloudinary.com/");
+}
+
 export const metadata: Metadata = {
   title: "مدونة المقاولات بالدمام",
   description: "مقالات عملية عن الدهانات والعزل والمظلات والسواتر والجبس والديكور في الدمام والخبر والظهران والقطيف.",
@@ -15,12 +19,20 @@ export const metadata: Metadata = {
 
 export default async function BlogPage() {
   const posts = await getBlogPosts();
+  const validPosts = posts.filter((post) => {
+    if (hasValidCloudinaryCoverImage(post.coverImage)) {
+      return true;
+    }
+
+    console.warn("Invalid blog image for slug:", post.slug);
+    return false;
+  });
 
   return (
     <section className="section">
       <div className="container">
         <h1>المدونة</h1>
-        {posts.length === 0 ? (
+        {validPosts.length === 0 ? (
           <div className="card seo-empty-state">
             <h2>قريبا: مقالات ونصائح محدثة</h2>
             <p>
@@ -44,27 +56,17 @@ export default async function BlogPage() {
           </div>
         ) : (
           <div className="grid grid-3">
-            {posts.map((post) => (
+            {validPosts.map((post) => (
               <article key={post.id} className="card blog-post-card">
                 <div className="blog-card-media">
-                  {(() => {
-                    const coverImage = post.coverImage;
-
-                    if (!coverImage) {
-                      throw new Error(`MISSING_BLOG_COVER_IMAGE:${post.slug}`);
-                    }
-
-                    return (
                   <Image
-                    src={coverImage}
+                    src={post.coverImage}
                     alt={post.titleAr}
                     width={1200}
                     height={720}
                     className="img-full"
                     sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw"
                   />
-                    );
-                  })()}
                 </div>
                 <h3>{post.titleAr}</h3>
                 <p>{post.excerptAr}</p>

@@ -9,9 +9,27 @@ import ClientImage from "@/components/ClientImage";
 
 export const revalidate = 300;
 
+function hasValidCloudinaryImage(imageSrc: string | null | undefined): imageSrc is string {
+  return typeof imageSrc === "string" && imageSrc.startsWith("https://res.cloudinary.com/");
+}
+
 export async function generateStaticParams() {
   const services = await getServices();
-  return services.map((service) => ({ slug: service.slug }));
+
+  return services
+    .filter((service) => {
+      const media = resolveServiceMedia(service);
+      const cover =
+        pickFirstImage([media.coverImage, media.imageUrl], { allowPlaceholders: false }) || media.gallery[0] || null;
+
+      if (hasValidCloudinaryImage(cover)) {
+        return true;
+      }
+
+      console.warn("Invalid service image for slug:", service.slug);
+      return false;
+    })
+    .map((service) => ({ slug: service.slug }));
 }
 
 export async function generateMetadata({ params }: { params: Promise<{ slug: string }> }): Promise<Metadata> {
@@ -46,18 +64,9 @@ export default async function ServiceDetails({ params }: { params: Promise<{ slu
   const galleryDescriptions: string[] = Array.isArray(service.galleryDescriptions) ? service.galleryDescriptions : [];
   const videoUrl = service.videoUrl || "";
 
-  if (!cover) {
-    throw new Error(`MISSING_SERVICE_COVER_IMAGE:${service.slug}`);
-  }
-
-  if (process.env.NODE_ENV !== "production") {
-    console.log("FRONTEND SERVICE DATA", service);
-  }
-
-  if (!cover) {
-    if (process.env.NODE_ENV !== "production") {
-      console.warn("FRONTEND SERVICE COVER MISSING", service.slug);
-    }
+  if (!hasValidCloudinaryImage(cover)) {
+    console.warn("Invalid service image for slug:", service.slug);
+    return notFound();
   }
 
   if (gallery.length === 0) {

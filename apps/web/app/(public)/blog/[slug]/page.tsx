@@ -6,9 +6,23 @@ import { SEO_KEYWORDS } from "@/lib/seo";
 
 export const revalidate = 300;
 
+function hasValidCloudinaryCoverImage(coverImage: string | null | undefined): coverImage is string {
+  return typeof coverImage === "string" && coverImage.startsWith("https://res.cloudinary.com/");
+}
+
 export async function generateStaticParams() {
   const posts = await getBlogPosts();
-  return posts.map((post) => ({ slug: post.slug }));
+
+  return posts
+    .filter((post) => {
+      if (hasValidCloudinaryCoverImage(post.coverImage)) {
+        return true;
+      }
+
+      console.warn("Invalid blog image for slug:", post.slug);
+      return false;
+    })
+    .map((post) => ({ slug: post.slug }));
 }
 
 export async function generateMetadata({ params }: { params: Promise<{ slug: string }> }): Promise<Metadata> {
@@ -30,13 +44,13 @@ export async function generateMetadata({ params }: { params: Promise<{ slug: str
       type: "article",
       title: post.seoTitleAr || post.titleAr,
       description: post.seoDescriptionAr || post.excerptAr,
-      images: post.coverImage ? [{ url: post.coverImage }] : undefined
+      images: hasValidCloudinaryCoverImage(post.coverImage) ? [{ url: post.coverImage }] : undefined
     },
     twitter: {
       card: "summary_large_image",
       title: post.seoTitleAr || post.titleAr,
       description: post.seoDescriptionAr || post.excerptAr,
-      images: post.coverImage ? [post.coverImage] : undefined
+      images: hasValidCloudinaryCoverImage(post.coverImage) ? [post.coverImage] : undefined
     },
     alternates: { canonical: `/blog/${post.slug}` }
   };
@@ -50,8 +64,9 @@ export default async function BlogDetails({ params }: { params: Promise<{ slug: 
     notFound();
   }
 
-  if (!post.coverImage) {
-    throw new Error(`MISSING_BLOG_COVER_IMAGE:${post.slug}`);
+  if (!hasValidCloudinaryCoverImage(post.coverImage)) {
+    console.warn("Invalid blog image for slug:", post.slug);
+    return notFound();
   }
 
   return (

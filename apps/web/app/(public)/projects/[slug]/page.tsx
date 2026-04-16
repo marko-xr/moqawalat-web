@@ -5,9 +5,25 @@ import { getProjectBySlug, getProjects } from "@/lib/api";
 
 export const revalidate = 300;
 
+function hasValidCloudinaryImage(imageSrc: string | null | undefined): imageSrc is string {
+  return typeof imageSrc === "string" && imageSrc.startsWith("https://res.cloudinary.com/");
+}
+
 export async function generateStaticParams() {
   const projects = await getProjects();
-  return projects.map((project) => ({ slug: project.slug }));
+
+  return projects
+    .filter((project) => {
+      const coverImage = project.coverImage || project.afterImage || project.beforeImage || null;
+
+      if (hasValidCloudinaryImage(coverImage)) {
+        return true;
+      }
+
+      console.warn("Invalid project image for slug:", project.slug);
+      return false;
+    })
+    .map((project) => ({ slug: project.slug }));
 }
 
 export async function generateMetadata({ params }: { params: Promise<{ slug: string }> }): Promise<Metadata> {
@@ -40,8 +56,9 @@ export default async function ProjectDetails({ params }: { params: Promise<{ slu
   const gallery: string[] = project.gallery || [];
   const videoUrl = project.videoUrl || "";
 
-  if (!cover) {
-    throw new Error(`MISSING_PROJECT_COVER_IMAGE:${project.slug}`);
+  if (!hasValidCloudinaryImage(cover)) {
+    console.warn("Invalid project image for slug:", project.slug);
+    return notFound();
   }
 
   let embedUrl = "";

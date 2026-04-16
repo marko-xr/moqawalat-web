@@ -13,26 +13,32 @@ export const metadata: Metadata = {
   alternates: { canonical: "/projects" }
 };
 
+function hasValidCloudinaryImage(imageSrc: string | null | undefined): imageSrc is string {
+  return typeof imageSrc === "string" && imageSrc.startsWith("https://res.cloudinary.com/");
+}
+
 export default async function ProjectsPage() {
   const projects = await getProjects();
+  const validProjects = projects.flatMap((project) => {
+    const coverImage = project.coverImage || project.afterImage || project.beforeImage || null;
+
+    if (hasValidCloudinaryImage(coverImage)) {
+      return [{ project, coverImage }];
+    }
+
+    console.warn("Invalid project image for slug:", project.slug);
+    return [];
+  });
 
   return (
     <section className="section">
       <div className="container">
         <h1>معرض المشاريع (قبل / بعد)</h1>
         <div className="grid grid-3">
-          {projects.map((project) => (
+          {validProjects.map(({ project, coverImage }) => (
             <article key={project.id} className="card">
               <Link href={`/projects/${project.slug}`} className="project-card-link" prefetch={false}>
                 <div className="project-card-media">
-                  {(() => {
-                    const coverImage = project.coverImage || project.afterImage || project.beforeImage;
-
-                    if (!coverImage) {
-                      throw new Error(`MISSING_PROJECT_COVER_IMAGE:${project.slug}`);
-                    }
-
-                    return (
                   <Image
                     src={coverImage}
                     alt={project.titleAr}
@@ -41,8 +47,6 @@ export default async function ProjectsPage() {
                     height={600}
                     sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw"
                   />
-                    );
-                  })()}
                 </div>
                 <h3>{project.titleAr}</h3>
                 <p>{project.descriptionAr}</p>
