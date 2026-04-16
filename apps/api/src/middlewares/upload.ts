@@ -23,8 +23,6 @@ function resolveUploadFolder(baseUrl: string): string {
   return "moqawalat/misc";
 }
 
-ensureCloudinaryConfigured();
-
 const storage = new CloudinaryStorage({
   cloudinary,
   params: async (req) => {

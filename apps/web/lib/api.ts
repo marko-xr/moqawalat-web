@@ -1,5 +1,5 @@
 import type { ServiceSeoPage } from "@/lib/types";
-import { isValidImageUrl, pickFirstImage, sanitizeImageList } from "@/lib/media";
+import { isValidImageUrl, pickFirstImage, sanitizeImageList, toCloudinaryDeliveryUrl } from "@/lib/media";
 import { resolveServiceMedia } from "@/lib/service-media-fallback";
 
 function resolveApiBaseUrl() {
@@ -24,6 +24,7 @@ function resolveApiOrigin() {
 }
 
 const API_ORIGIN = resolveApiOrigin();
+const CLOUDINARY_CLOUD_NAME = (process.env.CLOUDINARY_CLOUD_NAME || process.env.NEXT_PUBLIC_CLOUDINARY_CLOUD_NAME || "").trim();
 const REQUEST_TIMEOUT_MS = 8000;
 const DEFAULT_REVALIDATE_SECONDS = 300;
 
@@ -40,6 +41,11 @@ function normalizeMediaUrl(value?: string | null) {
   }
 
   const trimmed = value.trim();
+  const cloudinaryCanonical = toCloudinaryDeliveryUrl(trimmed, { cloudName: CLOUDINARY_CLOUD_NAME });
+
+  if (cloudinaryCanonical) {
+    return cloudinaryCanonical;
+  }
 
   if (trimmed.startsWith("/uploads/") && API_ORIGIN) {
     return `${API_ORIGIN}${trimmed}`;

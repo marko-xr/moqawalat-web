@@ -1,7 +1,10 @@
-import { isValidImageUrl, normalizeImageUrl } from "./media.js";
+import { isValidImageUrl, normalizeImageUrl, toCloudinaryDeliveryUrl } from "./media.js";
 
 function normalizeServiceImageUrl(value: string): string {
-  return normalizeImageUrl(value);
+  const normalized = normalizeImageUrl(value);
+  const canonical = toCloudinaryDeliveryUrl(normalized);
+
+  return canonical || normalized;
 }
 
 export function isValidServiceImageUrl(value: unknown): value is string {

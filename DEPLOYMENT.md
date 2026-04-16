@@ -67,3 +67,31 @@ Use the committed `railway.toml` at the repository root.
     - `npm install`
     - `npm run build --workspace @moqawalat/api`
 5. Confirm deploy logs show start command resolves to `node dist/server.js` under `apps/api`.
+
+## Option 4: Railway (Web + API as separate services)
+
+If both apps are deployed on Railway, each service must use its own healthcheck path.
+
+### Web service (`apps/web`)
+- Build command: `npm install && npm run build --workspace @moqawalat/web`
+- Start command: `cd apps/web && npm run start`
+- Healthcheck path: `/api/health`
+- Required env:
+   - `API_URL=https://<your-api-service-domain>/api`
+   - `NEXT_PUBLIC_API_URL=https://<your-api-service-domain>/api`
+   - `NEXT_PUBLIC_SITE_URL=https://<your-web-domain>`
+   - `NEXT_PUBLIC_WHATSAPP_NUMBER`
+   - `NEXT_PUBLIC_PHONE_NUMBER`
+
+### API service (`apps/api`)
+- Build command: `npm install && npm run build --workspace @moqawalat/api`
+- Start command: `cd apps/api && node dist/server.js`
+- Healthcheck path: `/api/health`
+- Required env:
+   - `DATABASE_URL`
+   - `JWT_SECRET`
+   - `JWT_EXPIRES_IN`
+   - `WEB_URL=https://<your-web-domain>`
+   - `CLOUDINARY_CLOUD_NAME`
+   - `CLOUDINARY_API_KEY`
+   - `CLOUDINARY_API_SECRET`

@@ -7,6 +7,7 @@ type RepairEntry = {
   slug: string;
   hadEmptyGallery: boolean;
   hadMissingCover: boolean;
+  hadLegacyMedia: boolean;
   nextCoverImage: string;
   nextGalleryCount: number;
 };
@@ -17,6 +18,7 @@ type RepairSummary = {
   affected: number;
   emptyGalleryCount: number;
   missingCoverCount: number;
+  legacyMediaCount: number;
   updated: RepairEntry[];
 };
 
@@ -29,6 +31,23 @@ function parseDryRunFlag(value: string | undefined): boolean {
 
   const normalized = value.trim().toLowerCase();
   return !(normalized === "false" || normalized === "0" || normalized === "no");
+}
+
+function normalizeArray(value: string[] | null | undefined) {
+  return Array.isArray(value)
+    ? value.map((item) => String(item || "").trim())
+    : [];
+}
+
+function arraysEqual(a: string[] | null | undefined, b: string[] | null | undefined) {
+  const left = normalizeArray(a);
+  const right = normalizeArray(b);
+
+  if (left.length !== right.length) {
+    return false;
+  }
+
+  return left.every((item, index) => item === right[index]);
 }
 
 async function main() {
@@ -54,6 +73,7 @@ async function main() {
     affected: 0,
     emptyGalleryCount: 0,
     missingCoverCount: 0,
+    legacyMediaCount: 0,
     updated: []
   };
 
@@ -65,12 +85,16 @@ async function main() {
     const coverCandidate = String(service.coverImage || "").trim();
     const hadEmptyGallery = sanitizedGallery.length === 0;
     const hadMissingCover = !isValidServiceImageUrl(coverCandidate);
+    const resolvedMedia = resolveServiceMedia(service);
+    const nextCoverImage = String(resolvedMedia.coverImage || "").trim();
+    const currentCoverImage = String(service.coverImage || "").trim();
+    const hadLegacyMedia =
+      nextCoverImage !== currentCoverImage ||
+      !arraysEqual(resolvedMedia.gallery, service.gallery);
 
-    if (!hadEmptyGallery && !hadMissingCover) {
+    if (!hadEmptyGallery && !hadMissingCover && !hadLegacyMedia) {
       continue;
     }
-
-    const resolvedMedia = resolveServiceMedia(service);
 
     if (!dryRun) {
       await prisma.service.update({
@@ -89,12 +113,16 @@ async function main() {
     if (hadMissingCover) {
       summary.missingCoverCount += 1;
     }
+    if (hadLegacyMedia) {
+      summary.legacyMediaCount += 1;
+    }
 
     summary.updated.push({
       id: service.id,
       slug: service.slug,
       hadEmptyGallery,
       hadMissingCover,
+      hadLegacyMedia,
       nextCoverImage: resolvedMedia.coverImage,
       nextGalleryCount: resolvedMedia.gallery.length
     });

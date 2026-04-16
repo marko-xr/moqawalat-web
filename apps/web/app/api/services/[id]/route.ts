@@ -1,7 +1,18 @@
 import { cookies } from "next/headers";
 import { NextResponse } from "next/server";
 
-const API_URL = process.env.API_URL || process.env.NEXT_PUBLIC_API_URL || "http://localhost:4000/api";
+function resolveApiBaseUrl() {
+  const raw = (process.env.API_URL || process.env.NEXT_PUBLIC_API_URL || "http://localhost:4000/api").trim();
+  const withoutTrailingSlash = raw.replace(/\/+$/, "");
+
+  if (/\/api$/i.test(withoutTrailingSlash)) {
+    return withoutTrailingSlash;
+  }
+
+  return `${withoutTrailingSlash}/api`;
+}
+
+const API_URL = resolveApiBaseUrl();
 
 type ProxyErrorPayload = {
   message?: string;

@@ -42,10 +42,9 @@ function logStartupContext() {
   console.log("DATABASE_URL present:", hasEnv("DATABASE_URL"));
 }
 
-function validateCloudinaryOrExit() {
+function validateCloudinaryConfiguration() {
   if (!hasEnv("CLOUDINARY_CLOUD_NAME") || !hasEnv("CLOUDINARY_API_KEY") || !hasEnv("CLOUDINARY_API_SECRET")) {
-    console.error("Missing Cloudinary env variables");
-    process.exit(1);
+    console.warn("Cloudinary env variables are missing; upload endpoints will return configuration errors until configured");
   }
 }
 
@@ -67,7 +66,7 @@ async function bootstrap() {
   registerGlobalErrorHandlers();
   loadEnvironmentFiles();
   logStartupContext();
-  validateCloudinaryOrExit();
+  validateCloudinaryConfiguration();
 
   if (!process.env.APP_VERSION || !process.env.APP_VERSION.trim()) {
     process.env.APP_VERSION = BUILD_COMMIT_SHA;
@@ -77,7 +76,7 @@ async function bootstrap() {
   const { app } = await import("./app.js");
   const { ensurePrismaConnection } = await import("./services/prisma.js");
 
-  app.listen(Number(PORT), () => {
+  app.listen(Number(PORT), "0.0.0.0", () => {
     console.log(`Server running on ${PORT}`);
   });
 

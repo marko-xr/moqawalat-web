@@ -1,9 +1,20 @@
 import { cookies } from "next/headers";
 import { NextResponse } from "next/server";
 import { revalidatePath } from "next/cache";
-import { isValidImageUrl, pickFirstImage, sanitizeImageList } from "@/lib/media";
+import { isValidImageUrl, pickFirstImage, sanitizeImageList, toCloudinaryDeliveryUrl } from "@/lib/media";
 
-const API_URL = process.env.API_URL || process.env.NEXT_PUBLIC_API_URL || "http://localhost:4000/api";
+function resolveApiBaseUrl() {
+  const raw = (process.env.API_URL || process.env.NEXT_PUBLIC_API_URL || "http://localhost:4000/api").trim();
+  const withoutTrailingSlash = raw.replace(/\/+$/, "");
+
+  if (/\/api$/i.test(withoutTrailingSlash)) {
+    return withoutTrailingSlash;
+  }
+
+  return `${withoutTrailingSlash}/api`;
+}
+
+const API_URL = resolveApiBaseUrl();
 
 function resolveApiOrigin() {
   try {
@@ -14,6 +25,7 @@ function resolveApiOrigin() {
 }
 
 const API_ORIGIN = resolveApiOrigin();
+const CLOUDINARY_CLOUD_NAME = (process.env.CLOUDINARY_CLOUD_NAME || process.env.NEXT_PUBLIC_CLOUDINARY_CLOUD_NAME || "").trim();
 
 type ProxyErrorPayload = {
   message?: string;
@@ -50,6 +62,11 @@ function normalizeMediaUrl(value?: string | null) {
   }
 
   const trimmed = value.trim();
+  const cloudinaryCanonical = toCloudinaryDeliveryUrl(trimmed, { cloudName: CLOUDINARY_CLOUD_NAME });
+
+  if (cloudinaryCanonical) {
+    return cloudinaryCanonical;
+  }
 
   if (trimmed.startsWith("/uploads/") && API_ORIGIN) {
     return `${API_ORIGIN}${trimmed}`;
