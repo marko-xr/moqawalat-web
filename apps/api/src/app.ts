@@ -14,6 +14,7 @@ import leadsRoutes from "./routes/leads.routes.js";
 import settingsRoutes from "./routes/settings.routes.js";
 import analyticsRoutes from "./routes/analytics.routes.js";
 import serviceSeoRoutes from "./routes/service-seo.routes.js";
+import { toCloudinaryDeliveryUrl } from "./services/media.js";
 
 export const app = express();
 app.set("trust proxy", 1);
@@ -98,6 +99,24 @@ app.get("/api/debug/routes", (_req, res) => {
       "/api/analytics"
     ]
   });
+});
+
+app.get("/uploads/*", (req, res) => {
+  const wildcardParams = req.params as Record<string, string | undefined>;
+  const suffix = String(wildcardParams["0"] || "").trim();
+
+  if (!suffix) {
+    return res.status(404).send("Cannot GET /uploads/");
+  }
+
+  const legacyPath = `/uploads/${suffix}`;
+  const cloudinaryUrl = toCloudinaryDeliveryUrl(legacyPath);
+
+  if (cloudinaryUrl) {
+    return res.redirect(302, cloudinaryUrl);
+  }
+
+  return res.status(404).send(`Cannot GET ${legacyPath}`);
 });
 
 app.use("/api/auth", authRoutes);
