@@ -292,6 +292,7 @@ export default function AdminServicesPage() {
   const [removeCoverImage, setRemoveCoverImage] = useState(false);
   const [removeVideoUrl, setRemoveVideoUrl] = useState(false);
   const [isCompressingImages, setIsCompressingImages] = useState(false);
+  const [isSaving, setIsSaving] = useState(false);
   const [deleteTarget, setDeleteTarget] = useState<Service | null>(null);
 
   const totalPages = Math.max(Math.ceil(total / PAGE_SIZE), 1);
@@ -445,6 +446,11 @@ export default function AdminServicesPage() {
 
   async function handleSubmit(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
+
+    if (isSaving) {
+      return;
+    }
+
     setNotice("");
     setError("");
 
@@ -452,6 +458,8 @@ export default function AdminServicesPage() {
       setError("يرجى الانتظار حتى يكتمل ضغط الصور ثم أعد المحاولة.");
       return;
     }
+
+    setIsSaving(true);
 
     try {
       const formData = new FormData();
@@ -515,6 +523,8 @@ export default function AdminServicesPage() {
       loadServices();
     } catch {
       setError("تعذر الاتصال بالخادم أثناء حفظ الخدمة. تحقق من الشبكة وإعدادات API/CORS ثم حاول مرة أخرى.");
+    } finally {
+      setIsSaving(false);
     }
   }
 
@@ -793,8 +803,8 @@ export default function AdminServicesPage() {
             {videoFile ? <small className="admin-hint">تم اختيار ملف فيديو: {videoFile.name}</small> : null}
           </div>
 
-          <button className="btn btn-primary" type="submit" disabled={isCompressingImages}>
-            {isCompressingImages ? "جار تجهيز الصور..." : form.id ? "تحديث الخدمة" : "حفظ الخدمة"}
+          <button className="btn btn-primary" type="submit" disabled={isCompressingImages || isSaving}>
+            {isSaving ? "جار الحفظ..." : isCompressingImages ? "جار تجهيز الصور..." : form.id ? "تحديث الخدمة" : "حفظ الخدمة"}
           </button>
         </form>
       </section>

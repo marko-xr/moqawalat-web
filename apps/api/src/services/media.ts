@@ -199,8 +199,9 @@ function extractUploadedMediaUrl(file: Express.Multer.File): string {
     filename?: string;
     public_id?: string;
   };
+  const cloudinaryMode = Boolean(process.env.CLOUDINARY_CLOUD_NAME?.trim());
 
-  const directCandidates = [uploadFile.secure_url, uploadFile.path, uploadFile.url];
+  const directCandidates = [uploadFile.secure_url, uploadFile.url, uploadFile.path];
 
   for (const candidate of directCandidates) {
     if (typeof candidate !== "string") {
@@ -212,9 +213,17 @@ function extractUploadedMediaUrl(file: Express.Multer.File): string {
       continue;
     }
 
+    if (normalized.startsWith(CLOUDINARY_SECURE_PREFIX) && isValidImageUrl(normalized)) {
+      return normalized;
+    }
+
     const canonical = toCloudinaryDeliveryUrl(normalized);
     if (canonical && isValidImageUrl(canonical)) {
       return canonical;
+    }
+
+    if (cloudinaryMode) {
+      continue;
     }
 
     if (isValidImageUrl(normalized)) {
@@ -234,6 +243,28 @@ function extractUploadedMediaUrl(file: Express.Multer.File): string {
   throw new Error("INVALID_UPLOAD_URL");
 }
 
+function buildUploadDedupSignature(file: Express.Multer.File) {
+  const uploadFile = file as Express.Multer.File & {
+    secure_url?: string;
+    path?: string;
+    url?: string;
+    filename?: string;
+    public_id?: string;
+  };
+
+  return [
+    file.fieldname,
+    file.originalname,
+    file.mimetype,
+    String(file.size || ""),
+    uploadFile.public_id || "",
+    uploadFile.filename || "",
+    uploadFile.secure_url || "",
+    uploadFile.url || "",
+    uploadFile.path || ""
+  ].join("|");
+}
+
 export async function uploadMediaFile(file: Express.Multer.File | undefined, _folder: string): Promise<string | undefined> {
   if (!file) {
     return undefined;
@@ -247,7 +278,21 @@ export async function uploadMediaFiles(files: Express.Multer.File[] | undefined,
     return [];
   }
 
-  const uploads = files.map((file) => uploadMediaFile(file, folder));
+  const uniqueFiles: Express.Multer.File[] = [];
+  const seenSignatures = new Set<string>();
+
+  for (const file of files) {
+    const signature = buildUploadDedupSignature(file);
+
+    if (seenSignatures.has(signature)) {
+      continue;
+    }
+
+    seenSignatures.add(signature);
+    uniqueFiles.push(file);
+  }
+
+  const uploads = uniqueFiles.map((file) => uploadMediaFile(file, folder));
   const results = await Promise.all(uploads);
   return results.filter((value): value is string => Boolean(value));
 }
