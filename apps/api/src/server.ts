@@ -10,6 +10,14 @@ function hasEnv(name: string) {
   return Boolean(process.env[name]?.trim());
 }
 
+function isManagedRuntime() {
+  return Boolean(
+    process.env.RAILWAY_ENVIRONMENT ||
+      process.env.RAILWAY_PROJECT_ID ||
+      process.env.RAILWAY_SERVICE_ID
+  );
+}
+
 function registerGlobalErrorHandlers() {
   process.on("uncaughtException", (error) => {
     console.error("uncaughtException:", error);
@@ -21,6 +29,11 @@ function registerGlobalErrorHandlers() {
 }
 
 function loadEnvironmentFiles() {
+  if (isManagedRuntime()) {
+    console.info("Managed runtime detected; skipping local .env file loading");
+    return;
+  }
+
   const moduleDir = path.dirname(fileURLToPath(import.meta.url));
   const apiRoot = path.resolve(moduleDir, "..");
   const repoRoot = path.resolve(apiRoot, "..", "..");

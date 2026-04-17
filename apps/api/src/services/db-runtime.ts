@@ -10,6 +10,7 @@ type RuntimeState = {
   envLoaded: boolean;
   lastValidatedUrl?: string;
   loggedUrlSignature?: string;
+  skippedEnvLoading?: boolean;
 };
 
 const LOG_PREFIX = "[db-runtime]";
@@ -27,6 +28,24 @@ globalForDbRuntime.__moqawalatDbRuntimeState = runtimeState;
 
 function uniquePaths(paths: string[]): string[] {
   return [...new Set(paths.map((value) => path.resolve(value)))];
+}
+
+function isManagedRuntime() {
+  return Boolean(
+    process.env.RAILWAY_ENVIRONMENT ||
+      process.env.RAILWAY_PROJECT_ID ||
+      process.env.RAILWAY_SERVICE_ID
+  );
+}
+
+function shouldLoadDotEnv(runtime: DatabaseRuntime) {
+  if (isManagedRuntime()) {
+    return false;
+  }
+
+  // Keep local script/dev workflows unchanged.
+  void runtime;
+  return true;
 }
 
 function getCandidateEnvFiles(runtime: DatabaseRuntime): string[] {
@@ -49,6 +68,13 @@ function getCandidateEnvFiles(runtime: DatabaseRuntime): string[] {
 
 function loadEnvironment(runtime: DatabaseRuntime) {
   if (runtimeState.envLoaded) {
+    return;
+  }
+
+  if (!shouldLoadDotEnv(runtime)) {
+    runtimeState.envLoaded = true;
+    runtimeState.skippedEnvLoading = true;
+    console.info(`${LOG_PREFIX} Managed runtime detected; skipping local .env file loading.`);
     return;
   }
 
@@ -80,6 +106,16 @@ function classifyDatabaseUrl(databaseUrl: string): DatabaseMode {
   }
 
   return "INVALID";
+}
+
+function isLocalDatabaseHost(databaseUrl: string) {
+  try {
+    const parsed = new URL(databaseUrl);
+    const host = (parsed.hostname || "").trim().toLowerCase();
+    return host === "localhost" || host === "127.0.0.1" || host === "::1";
+  } catch {
+    return false;
+  }
 }
 
 function maskToken(value: string): string {
@@ -152,6 +188,14 @@ export function initializeDatabaseRuntime(options?: { runtime?: DatabaseRuntime;
   }
 
   const mode = classifyDatabaseUrl(databaseUrl);
+
+  if (isManagedRuntime() && isLocalDatabaseHost(databaseUrl)) {
+    const sanitized = sanitizeDatabaseUrl(databaseUrl);
+    throw new Error(
+      `${LOG_PREFIX} Invalid managed runtime DATABASE_URL host. Localhost is not allowed in Railway/managed runtime. ` +
+        `Set DATABASE_URL to Railway internal/private PostgreSQL URL. Source: ${source}. Current: ${sanitized}`
+    );
+  }
 
   if (mode !== "DIRECT") {
     if (strict) {

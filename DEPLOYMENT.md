@@ -95,3 +95,8 @@ If both apps are deployed on Railway, each service must use its own healthcheck 
    - `CLOUDINARY_CLOUD_NAME`
    - `CLOUDINARY_API_KEY`
    - `CLOUDINARY_API_SECRET`
+
+Important:
+- In Railway, `DATABASE_URL` must NOT point to `localhost`.
+- Prefer the PostgreSQL Internal/Private URL (for example `postgres.railway.internal`) over proxy/local URLs.
+- API runtime now skips loading local `.env` files in managed environments and will fail fast if DB host is localhost.
