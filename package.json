@@ -8,7 +8,8 @@
   "scripts": {
     "dev": "concurrently \"npm run dev --workspace @moqawalat/api\" \"npm run dev --workspace @moqawalat/web\"",
     "build": "npm run build --workspace @moqawalat/api && npm run build --workspace @moqawalat/web",
-    "start": "concurrently \"npm run start --workspace @moqawalat/api\" \"npm run start --workspace @moqawalat/web\"",
+    "start": "npm run start --workspace @moqawalat/web",
+    "start:all": "concurrently \"npm run start --workspace @moqawalat/api\" \"npm run start --workspace @moqawalat/web\"",
     "prisma:generate": "prisma generate",
     "prisma:migrate": "prisma migrate dev",
     "prisma:seed": "tsx prisma/seed.ts",
