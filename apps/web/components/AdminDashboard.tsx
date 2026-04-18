@@ -3,7 +3,8 @@
 import { useEffect, useMemo, useState } from "react";
 import type { BlogPost, DashboardAnalytics, Lead, Project, Service } from "@/lib/types";
 
-const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:4000/api";
+const API_URL = process.env.NEXT_PUBLIC_API_URL || "https://moqawalatapi-production.up.railway.app/api";
+const SERVICES_API_BASE_URL = "https://moqawalatapi-production.up.railway.app/api";
 
 type Section = "analytics" | "services" | "projects" | "blog" | "leads";
 
@@ -36,7 +37,7 @@ export default function AdminDashboard() {
   async function loadAll() {
     const [a, s, p, b, l] = await Promise.all([
       fetch(`${API_URL}/analytics/dashboard`, { headers }).then((r) => r.json()),
-      fetch(`${API_URL}/services`).then((r) => r.json()),
+      fetch(`${SERVICES_API_BASE_URL}/services`, { cache: "no-store" }).then((r) => r.json()),
       fetch(`${API_URL}/projects`).then((r) => r.json()),
       fetch(`${API_URL}/blog?all=true`).then((r) => r.json()),
       fetch(`${API_URL}/leads`, { headers }).then((r) => r.json())
@@ -77,7 +78,7 @@ export default function AdminDashboard() {
       seoDescriptionAr: String(form.get("seoDescriptionAr") || "")
     };
 
-    const endpoint = id ? `${API_URL}/services/${id}` : `${API_URL}/services`;
+    const endpoint = id ? `${SERVICES_API_BASE_URL}/services/${id}` : `${SERVICES_API_BASE_URL}/services`;
     const method = id ? "PUT" : "POST";
 
     const res = await fetch(endpoint, { method, headers, body: JSON.stringify(payload) });

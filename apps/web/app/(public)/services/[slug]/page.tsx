@@ -41,7 +41,7 @@ export default async function ServiceDetails({ params }: { params: Promise<{ slu
 
   const media = resolveServiceMedia(service);
   const gallery: string[] = sanitizeImageList(media.gallery, { allowPlaceholders: false });
-  const cover = pickFirstImage([media.coverImage, media.gallery?.[0]], { allowPlaceholders: false });
+  const cover = pickFirstImage([media.coverImage, media.imageUrl, media.gallery?.[0]], { allowPlaceholders: false });
   const galleryDescriptions: string[] = Array.isArray(service.galleryDescriptions) ? service.galleryDescriptions : [];
   const videoUrl = service.videoUrl || "";
 
@@ -58,7 +58,7 @@ export default async function ServiceDetails({ params }: { params: Promise<{ slu
 
   if (process.env.NODE_ENV !== "production") {
     console.log("FRONTEND RECEIVED IMAGES", service.slug, {
-      coverImage: media.coverImage || media.gallery?.[0] || null,
+      coverImage: media.coverImage || media.imageUrl || media.gallery?.[0] || null,
       galleryCount: Array.isArray(media.gallery) ? media.gallery.length : 0
     });
 
@@ -193,7 +193,7 @@ export default async function ServiceDetails({ params }: { params: Promise<{ slu
         {process.env.NODE_ENV !== "production" ? (
           <ServiceImageDebugPanel
             pageSlug={service.slug}
-            coverImage={media.coverImage || media.gallery?.[0] || null}
+            coverImage={media.coverImage || media.imageUrl || media.gallery?.[0] || null}
             gallery={media.gallery}
             sourceLabel="services/[slug]"
           />

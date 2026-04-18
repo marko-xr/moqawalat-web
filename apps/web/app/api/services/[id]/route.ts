@@ -2,7 +2,7 @@ import { cookies } from "next/headers";
 import { NextResponse } from "next/server";
 
 function resolveApiBaseUrl() {
-  const raw = (process.env.API_URL || process.env.NEXT_PUBLIC_API_URL || "http://localhost:4000/api").trim();
+  const raw = (process.env.API_URL || process.env.NEXT_PUBLIC_API_URL || "https://moqawalatapi-production.up.railway.app/api").trim();
   const withoutTrailingSlash = raw.replace(/\/+$/, "");
 
   if (/\/api$/i.test(withoutTrailingSlash)) {

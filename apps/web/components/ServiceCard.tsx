@@ -1,3 +1,5 @@
+"use client";
+
 import Link from "next/link";
 import type { Service } from "@/lib/types";
 import { isValidImageUrl } from "@/lib/media";
@@ -10,7 +12,7 @@ function hasValidImage(imageSrc: string | null | undefined): imageSrc is string 
 
 export default function ServiceCard({ service }: { service: Service }) {
   const media = resolveServiceMedia(service);
-  const cover = media.coverImage || media.gallery?.[0] || null;
+  const cover = media.coverImage || media.imageUrl || media.gallery?.[0] || null;
 
   if (!hasValidImage(cover)) {
     console.warn("Invalid service image for slug:", service.slug);

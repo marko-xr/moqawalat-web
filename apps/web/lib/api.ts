@@ -3,7 +3,7 @@ import { isValidImageUrl, pickFirstImage, sanitizeImageList, toCloudinaryDeliver
 import { resolveServiceMedia } from "@/lib/service-media-fallback";
 
 function resolveApiBaseUrl() {
-  const raw = (process.env.API_URL || process.env.NEXT_PUBLIC_API_URL || "http://localhost:4000/api").trim();
+  const raw = (process.env.API_URL || process.env.NEXT_PUBLIC_API_URL || "https://moqawalatapi-production.up.railway.app/api").trim();
   const withoutTrailingSlash = raw.replace(/\/+$/, "");
 
   if (/\/api$/i.test(withoutTrailingSlash)) {
@@ -14,6 +14,7 @@ function resolveApiBaseUrl() {
 }
 
 const API_URL = resolveApiBaseUrl();
+const PRODUCTION_SERVICES_API_BASE_URL = "https://moqawalatapi-production.up.railway.app/api";
 
 function resolveApiOrigin() {
   try {
@@ -147,9 +148,17 @@ async function request<T>(path: string, init?: RequestInit): Promise<T> {
 
 export async function getServices() {
   try {
-    const services = await request<any[]>("/services", {
+    const res = await fetch(`${PRODUCTION_SERVICES_API_BASE_URL}/services`, {
       cache: "no-store"
     });
+
+    if (!res.ok) {
+      throw new Error(`API error: ${res.status}`);
+    }
+
+    const payload = (await res.json()) as any;
+    const services = Array.isArray(payload) ? payload : Array.isArray(payload?.data) ? payload.data : [];
+
     if (!Array.isArray(services) || services.length === 0) {
       return [];
     }
@@ -162,14 +171,21 @@ export async function getServices() {
 
 export async function getServiceBySlug(slug: string) {
   try {
-    const service = await request<any>(`/services/${slug}`, {
+    const res = await fetch(`${PRODUCTION_SERVICES_API_BASE_URL}/services/${slug}`, {
       cache: "no-store"
     });
+
+    if (!res.ok) {
+      throw new Error(`API error: ${res.status}`);
+    }
+
+    const payload = (await res.json()) as any;
+    const service = payload?.data ?? payload;
     const normalized = normalizeService(service);
 
     if (process.env.NODE_ENV !== "production") {
       console.log("[service] by-slug", slug, {
-        coverImage: normalized?.coverImage || normalized?.gallery?.[0] || null,
+        coverImage: normalized?.coverImage || normalized?.imageUrl || normalized?.gallery?.[0] || null,
         galleryCount: Array.isArray(normalized?.gallery) ? normalized.gallery.length : 0
       });
     }

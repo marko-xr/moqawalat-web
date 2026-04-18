@@ -4,7 +4,7 @@ import { isValidImageUrl, sanitizeImageList, toCloudinaryDeliveryUrl } from "@/l
 import { resolveServiceMedia } from "@/lib/service-media-fallback";
 
 function resolveApiBaseUrl() {
-  const raw = (process.env.API_URL || process.env.NEXT_PUBLIC_API_URL || "http://localhost:4000/api").trim();
+  const raw = (process.env.API_URL || process.env.NEXT_PUBLIC_API_URL || "https://moqawalatapi-production.up.railway.app/api").trim();
   const withoutTrailingSlash = raw.replace(/\/+$/, "");
 
   if (/\/api$/i.test(withoutTrailingSlash)) {

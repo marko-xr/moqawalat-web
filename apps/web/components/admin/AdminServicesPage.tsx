@@ -11,6 +11,7 @@ const IMAGE_MAX_SIDE_PX = 1920;
 const IMAGE_TARGET_MAX_BYTES = 900 * 1024;
 const IMAGE_INITIAL_QUALITY = 0.82;
 const IMAGE_MIN_QUALITY = 0.55;
+const SERVICES_API_BASE_URL = "https://moqawalatapi-production.up.railway.app/api";
 
 type ServiceFormState = {
   id?: string;
@@ -61,7 +62,7 @@ function formatDate(value?: string) {
 }
 
 function hasRealImage(item: Service): boolean {
-  const cover = item.coverImage || item.gallery?.[0] || "";
+  const cover = item.coverImage || item.imageUrl || item.gallery?.[0] || "";
   return isValidImageUrl(cover, { allowPlaceholders: false });
 }
 
@@ -174,15 +175,6 @@ function getCookieValue(name: string) {
   } catch {
     return matched[1];
   }
-}
-
-function getDirectApiBaseUrl() {
-  const value = (process.env.NEXT_PUBLIC_API_URL || "").trim();
-  if (!/^https?:\/\//i.test(value)) {
-    return "";
-  }
-
-  return value.replace(/\/+$/, "");
 }
 
 function toWebpFileName(fileName: string) {
@@ -315,29 +307,46 @@ export default function AdminServicesPage() {
     setLoading(true);
     setError("");
 
-    const params = new URLSearchParams({
-      q,
-      published,
-      page: String(page),
-      pageSize: String(PAGE_SIZE)
+    const token = getCookieValue("admin_token");
+    const endpoint = token ? `${SERVICES_API_BASE_URL}/services/admin` : `${SERVICES_API_BASE_URL}/services`;
+    const response = await fetch(endpoint, {
+      cache: "no-store",
+      ...(token ? { headers: { Authorization: `Bearer ${token}` } } : {})
     });
-
-    const response = await fetch(`/api/services?${params.toString()}`, { cache: "no-store" });
 
     if (!response.ok) {
       throw new Error("تعذر تحميل الخدمات");
     }
 
-    const payload = (await response.json()) as {
-      items: Service[];
-      total: number;
-      page: number;
-      totalPages: number;
-    };
+    const payload = (await response.json()) as unknown;
+    const allItems = Array.isArray(payload)
+      ? (payload as Service[])
+      : Array.isArray((payload as { data?: unknown })?.data)
+        ? ((payload as { data: Service[] }).data || [])
+        : Array.isArray((payload as { items?: unknown })?.items)
+          ? ((payload as { items: Service[] }).items || [])
+          : [];
 
-    setItems(payload.items);
-    setTotal(payload.total);
-    setPage(payload.page);
+    const trimmedQuery = q.trim().toLowerCase();
+    const filtered = allItems.filter((item) => {
+      const matchesQuery = trimmedQuery
+        ? [item.titleAr, item.slug, item.shortDescAr].some((field) => String(field || "").toLowerCase().includes(trimmedQuery))
+        : true;
+
+      const matchesPublished =
+        published === "true" ? item.isPublished === true : published === "false" ? item.isPublished === false : true;
+
+      return matchesQuery && matchesPublished;
+    });
+
+    const computedTotal = filtered.length;
+    const computedTotalPages = Math.max(Math.ceil(computedTotal / PAGE_SIZE), 1);
+    const safePage = Math.min(page, computedTotalPages);
+    const start = (safePage - 1) * PAGE_SIZE;
+
+    setItems(filtered.slice(start, start + PAGE_SIZE));
+    setTotal(computedTotal);
+    setPage(safePage);
     setLoading(false);
   }, [page, published, q]);
 
@@ -385,7 +394,7 @@ export default function AdminServicesPage() {
       seoDescriptionAr: item.seoDescriptionAr || "",
       videoUrl: item.videoUrl || "",
       isPublished: item.isPublished ?? true,
-      coverImage: item.coverImage || normalizedGallery[0] || "",
+      coverImage: item.coverImage || item.imageUrl || normalizedGallery[0] || "",
       gallery: normalizedGallery,
       galleryDescriptions: [
         ...existingDescriptions.slice(0, normalizedGallery.length),
@@ -497,35 +506,30 @@ export default function AdminServicesPage() {
       }
 
       const seenNewGalleryFileSignatures = new Set<string>();
-      (galleryFiles as Array<File | string>).forEach((entry) => {
-        if (typeof entry === "string") {
-          return;
-        }
-
-        if (!(entry instanceof File)) {
-          return;
-        }
-
-        const signature = `${entry.name}::${entry.size}::${entry.lastModified}`;
+      galleryFiles.forEach((file) => {
+        const signature = `${file.name}::${file.size}::${file.lastModified}`;
         if (seenNewGalleryFileSignatures.has(signature)) {
           return;
         }
 
         seenNewGalleryFileSignatures.add(signature);
-        formData.append("gallery", entry);
+        formData.append("gallery", file);
       });
 
-      const proxyEndpoint = form.id ? `/api/services/${form.id}` : "/api/services";
       const method = form.id ? "PUT" : "POST";
-      const directApiBaseUrl = getDirectApiBaseUrl();
       const token = getCookieValue("admin_token");
-      const canUseDirectApi = Boolean(directApiBaseUrl && token);
-      const directEndpoint = form.id ? `${directApiBaseUrl}/services/${form.id}` : `${directApiBaseUrl}/services`;
-      const endpoint = canUseDirectApi ? directEndpoint : proxyEndpoint;
+
+      if (!token) {
+        setError("غير مصرح. أعد تسجيل الدخول ثم حاول مرة أخرى.");
+        return;
+      }
+
+      const endpoint = form.id ? `${SERVICES_API_BASE_URL}/services/${form.id}` : `${SERVICES_API_BASE_URL}/services`;
 
       const response = await fetch(endpoint, {
         method,
-        ...(canUseDirectApi ? { headers: { Authorization: `Bearer ${token}` } } : {}),
+        cache: "no-store",
+        headers: { Authorization: `Bearer ${token}` },
         body: formData
       });
 
@@ -550,7 +554,17 @@ export default function AdminServicesPage() {
       return;
     }
 
-    const response = await fetch(`/api/services/${deleteTarget.id}`, { method: "DELETE" });
+    const token = getCookieValue("admin_token");
+    if (!token) {
+      setError("غير مصرح. أعد تسجيل الدخول ثم حاول مرة أخرى.");
+      return;
+    }
+
+    const response = await fetch(`${SERVICES_API_BASE_URL}/services/${deleteTarget.id}`, {
+      method: "DELETE",
+      cache: "no-store",
+      headers: { Authorization: `Bearer ${token}` }
+    });
 
     if (!response.ok) {
       setError("تعذر حذف الخدمة");

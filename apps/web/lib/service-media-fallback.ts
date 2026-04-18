@@ -13,8 +13,10 @@ export function resolveServiceMedia<T extends { slug?: string | null; titleAr?: 
 
   const gallery = sanitizedGallery;
   const normalizedCoverImage = typeof service.coverImage === "string" ? service.coverImage.trim() : "";
+  const normalizedImageUrl = typeof service.imageUrl === "string" ? service.imageUrl.trim() : "";
   const coverCandidate =
     (isValidImageUrl(normalizedCoverImage, { allowPlaceholders: false }) ? normalizedCoverImage : "") ||
+    (isValidImageUrl(normalizedImageUrl, { allowPlaceholders: false }) ? normalizedImageUrl : "") ||
     gallery[0] ||
     "";
   const coverImage = isValidImageUrl(coverCandidate, { allowPlaceholders: false }) ? coverCandidate : null;
