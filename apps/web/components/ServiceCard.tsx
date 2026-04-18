@@ -2,32 +2,22 @@
 
 import Link from "next/link";
 import type { Service } from "@/lib/types";
-import { isValidImageUrl } from "@/lib/media";
-import { resolveServiceMedia } from "@/lib/service-media-fallback";
-import ClientImage from "@/components/ClientImage";
-
-function hasValidImage(imageSrc: string | null | undefined): imageSrc is string {
-  return typeof imageSrc === "string" && isValidImageUrl(imageSrc, { allowPlaceholders: false });
-}
 
 export default function ServiceCard({ service }: { service: Service }) {
-  const media = resolveServiceMedia(service);
-  const cover = media.coverImage || media.imageUrl || media.gallery?.[0] || null;
-  const hasImage = hasValidImage(cover);
+  const image =
+    service.coverImage ||
+    service.imageUrl ||
+    (Array.isArray(service.gallery) ? service.gallery[0] : null) ||
+    null;
 
   return (
     <article className="card service-card">
-      {hasImage && (
+      {image && (
         <div className="service-card-media">
-          <ClientImage
-            src={cover}
+          <img
+            src={image}
             alt={service.titleAr}
-            width={800}
-            height={500}
-            sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw"
-            quality={82}
             loading="lazy"
-            errorContext={`service-card:${service.slug}`}
           />
         </div>
       )}
