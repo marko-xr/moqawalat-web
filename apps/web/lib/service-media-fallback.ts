@@ -3,7 +3,6 @@ import { isValidImageUrl } from "@/lib/media";
 export function resolveServiceMedia<T extends { slug?: string | null; titleAr?: string | null; coverImage?: string | null; imageUrl?: string | null; gallery?: string[] | null }>(
   service: T
 ): T & { coverImage: string | null; gallery: string[] } {
-
   const sanitizedGallery = Array.from(
     new Set(
       (Array.isArray(service.gallery) ? service.gallery : [])
@@ -13,15 +12,12 @@ export function resolveServiceMedia<T extends { slug?: string | null; titleAr?: 
   );
 
   const gallery = sanitizedGallery;
-
+  const normalizedCoverImage = typeof service.coverImage === "string" ? service.coverImage.trim() : "";
   const coverCandidate =
-    (typeof service.coverImage === "string" ? service.coverImage.trim() : "") ||
-    (typeof service.imageUrl === "string" ? service.imageUrl.trim() : "");
-
-  const coverImage =
-    isValidImageUrl(coverCandidate, { allowPlaceholders: false })
-      ? coverCandidate
-      : null;
+    (isValidImageUrl(normalizedCoverImage, { allowPlaceholders: false }) ? normalizedCoverImage : "") ||
+    gallery[0] ||
+    "";
+  const coverImage = isValidImageUrl(coverCandidate, { allowPlaceholders: false }) ? coverCandidate : null;
 
   return {
     ...service,

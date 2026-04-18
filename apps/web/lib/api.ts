@@ -147,7 +147,9 @@ async function request<T>(path: string, init?: RequestInit): Promise<T> {
 
 export async function getServices() {
   try {
-    const services = await request<any[]>("/services");
+    const services = await request<any[]>("/services", {
+      cache: "no-store"
+    });
     if (!Array.isArray(services) || services.length === 0) {
       return [];
     }
@@ -160,12 +162,14 @@ export async function getServices() {
 
 export async function getServiceBySlug(slug: string) {
   try {
-    const service = await request<any>(`/services/${slug}`);
+    const service = await request<any>(`/services/${slug}`, {
+      cache: "no-store"
+    });
     const normalized = normalizeService(service);
 
     if (process.env.NODE_ENV !== "production") {
       console.log("[service] by-slug", slug, {
-        coverImage: normalized?.coverImage || normalized?.imageUrl || null,
+        coverImage: normalized?.coverImage || normalized?.gallery?.[0] || null,
         galleryCount: Array.isArray(normalized?.gallery) ? normalized.gallery.length : 0
       });
     }

@@ -61,7 +61,7 @@ function formatDate(value?: string) {
 }
 
 function hasRealImage(item: Service): boolean {
-  const cover = item.coverImage || item.imageUrl || "";
+  const cover = item.coverImage || item.gallery?.[0] || "";
   return isValidImageUrl(cover, { allowPlaceholders: false });
 }
 
@@ -385,7 +385,7 @@ export default function AdminServicesPage() {
       seoDescriptionAr: item.seoDescriptionAr || "",
       videoUrl: item.videoUrl || "",
       isPublished: item.isPublished ?? true,
-      coverImage: item.coverImage || item.imageUrl || "",
+      coverImage: item.coverImage || normalizedGallery[0] || "",
       gallery: normalizedGallery,
       galleryDescriptions: [
         ...existingDescriptions.slice(0, normalizedGallery.length),
@@ -496,7 +496,24 @@ export default function AdminServicesPage() {
         formData.append("video", videoFile);
       }
 
-      galleryFiles.forEach((file) => formData.append("gallery", file));
+      const seenNewGalleryFileSignatures = new Set<string>();
+      (galleryFiles as Array<File | string>).forEach((entry) => {
+        if (typeof entry === "string") {
+          return;
+        }
+
+        if (!(entry instanceof File)) {
+          return;
+        }
+
+        const signature = `${entry.name}::${entry.size}::${entry.lastModified}`;
+        if (seenNewGalleryFileSignatures.has(signature)) {
+          return;
+        }
+
+        seenNewGalleryFileSignatures.add(signature);
+        formData.append("gallery", entry);
+      });
 
       const proxyEndpoint = form.id ? `/api/services/${form.id}` : "/api/services";
       const method = form.id ? "PUT" : "POST";

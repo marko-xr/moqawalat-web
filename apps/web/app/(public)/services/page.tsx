@@ -5,7 +5,7 @@ import { isValidImageUrl } from "@/lib/media";
 import { SEO_KEYWORDS } from "@/lib/seo";
 import { resolveServiceMedia } from "@/lib/service-media-fallback";
 
-export const revalidate = 300;
+export const dynamic = "force-dynamic";
 
 function hasValidImage(imageSrc: string | null | undefined): imageSrc is string {
   return typeof imageSrc === "string" && isValidImageUrl(imageSrc, { allowPlaceholders: false });
@@ -25,7 +25,7 @@ export default async function ServicesPage() {
     services.forEach((service) => {
       const media = resolveServiceMedia(service);
       console.log("FRONTEND RECEIVED IMAGES", `service:${service.slug}`, {
-        coverImage: media.coverImage || media.imageUrl || null,
+        coverImage: media.coverImage || media.gallery?.[0] || null,
         galleryCount: Array.isArray(media.gallery) ? media.gallery.length : 0
       });
     });

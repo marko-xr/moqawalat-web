@@ -17,7 +17,7 @@ export function isRealServiceImageUrl(value: unknown): value is string {
 
 export function resolveServiceMedia<T extends { slug?: string | null; titleAr?: string | null; coverImage?: string | null; imageUrl?: string | null; gallery?: string[] | null }>(
   service: T
-): T & { coverImage: string | null; gallery: string[] } {
+): T & { coverImage: string | null; imageUrl: string | null; gallery: string[] } {
   const sanitizedGallery = Array.from(
     new Set(
       (Array.isArray(service.gallery) ? service.gallery : [])
@@ -27,15 +27,13 @@ export function resolveServiceMedia<T extends { slug?: string | null; titleAr?: 
   );
 
   const gallery = sanitizedGallery;
-
-  const coverCandidate =
-    (typeof service.coverImage === "string" ? normalizeServiceImageUrl(service.coverImage) : "") ||
-    (typeof service.imageUrl === "string" ? normalizeServiceImageUrl(service.imageUrl) : "");
-
+  const normalizedCoverImage = typeof service.coverImage === "string" ? normalizeServiceImageUrl(service.coverImage) : "";
+  const coverCandidate = (isValidServiceImageUrl(normalizedCoverImage) ? normalizedCoverImage : "") || gallery[0] || "";
   const coverImage = isValidServiceImageUrl(coverCandidate) ? coverCandidate : null;
 
   return {
     ...service,
+    imageUrl: coverImage,
     coverImage,
     gallery
   };

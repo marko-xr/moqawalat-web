@@ -1,5 +1,5 @@
 import type { Metadata } from "next";
-import { getServiceBySlug, getServices } from "@/lib/api";
+import { getServiceBySlug } from "@/lib/api";
 import { notFound } from "next/navigation";
 import { getSiteUrl } from "@/lib/site-url";
 import { isValidImageUrl, pickFirstImage, sanitizeImageList } from "@/lib/media";
@@ -7,28 +7,10 @@ import { resolveServiceMedia } from "@/lib/service-media-fallback";
 import ServiceImageDebugPanel from "@/components/dev/ServiceImageDebugPanel";
 import ClientImage from "@/components/ClientImage";
 
-export const revalidate = 300;
+export const dynamic = "force-dynamic";
 
 function hasValidImage(imageSrc: string | null | undefined): imageSrc is string {
   return typeof imageSrc === "string" && isValidImageUrl(imageSrc, { allowPlaceholders: false });
-}
-
-export async function generateStaticParams() {
-  const services = await getServices();
-
-  return services
-    .filter((service) => {
-      const media = resolveServiceMedia(service);
-      const cover = pickFirstImage([media.coverImage, media.imageUrl], { allowPlaceholders: false });
-
-      if (hasValidImage(cover)) {
-        return true;
-      }
-
-      console.warn("Invalid service image for slug:", service.slug);
-      return false;
-    })
-    .map((service) => ({ slug: service.slug }));
 }
 
 export async function generateMetadata({ params }: { params: Promise<{ slug: string }> }): Promise<Metadata> {
@@ -59,7 +41,7 @@ export default async function ServiceDetails({ params }: { params: Promise<{ slu
 
   const media = resolveServiceMedia(service);
   const gallery: string[] = sanitizeImageList(media.gallery, { allowPlaceholders: false });
-  const cover = pickFirstImage([media.coverImage, media.imageUrl], { allowPlaceholders: false });
+  const cover = pickFirstImage([media.coverImage, media.gallery?.[0]], { allowPlaceholders: false });
   const galleryDescriptions: string[] = Array.isArray(service.galleryDescriptions) ? service.galleryDescriptions : [];
   const videoUrl = service.videoUrl || "";
 
@@ -76,7 +58,7 @@ export default async function ServiceDetails({ params }: { params: Promise<{ slu
 
   if (process.env.NODE_ENV !== "production") {
     console.log("FRONTEND RECEIVED IMAGES", service.slug, {
-      coverImage: media.coverImage || media.imageUrl || null,
+      coverImage: media.coverImage || media.gallery?.[0] || null,
       galleryCount: Array.isArray(media.gallery) ? media.gallery.length : 0
     });
 
@@ -211,7 +193,7 @@ export default async function ServiceDetails({ params }: { params: Promise<{ slu
         {process.env.NODE_ENV !== "production" ? (
           <ServiceImageDebugPanel
             pageSlug={service.slug}
-            coverImage={media.coverImage || media.imageUrl || null}
+            coverImage={media.coverImage || media.gallery?.[0] || null}
             gallery={media.gallery}
             sourceLabel="services/[slug]"
           />
