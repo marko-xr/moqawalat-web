@@ -46,8 +46,9 @@ export default async function ServiceDetails({ params }: { params: Promise<{ slu
   const videoUrl = service.videoUrl || "";
 
   if (!hasValidImage(cover)) {
-    console.warn("Invalid service image for slug:", service.slug);
-    return notFound();
+    if (process.env.NODE_ENV !== "production") {
+      console.warn("No valid cover image for slug:", service.slug);
+    }
   }
 
   if (gallery.length === 0) {
@@ -120,18 +121,20 @@ export default async function ServiceDetails({ params }: { params: Promise<{ slu
             <h1>{service.titleAr}</h1>
             <p className="lead">{service.shortDescAr}</p>
           </div>
-          <div className="service-hero-media">
-            <ClientImage
-              src={cover}
-              alt={service.titleAr}
-              width={1280}
-              height={853}
-              sizes="(max-width: 1024px) 100vw, 50vw"
-              quality={90}
-              priority
-              errorContext={`service-hero:${service.slug}`}
-            />
-          </div>
+          {hasValidImage(cover) && (
+            <div className="service-hero-media">
+              <ClientImage
+                src={cover}
+                alt={service.titleAr}
+                width={1280}
+                height={853}
+                sizes="(max-width: 1024px) 100vw, 50vw"
+                quality={90}
+                priority
+                errorContext={`service-hero:${service.slug}`}
+              />
+            </div>
+          )}
         </div>
 
         <div className="card service-body">

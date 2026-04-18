@@ -1,15 +1,30 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useState } from "react";
 import ServiceCard from "@/components/ServiceCard";
-import { isValidImageUrl } from "@/lib/media";
-import { resolveServiceMedia } from "@/lib/service-media-fallback";
 import type { Service } from "@/lib/types";
 
 const SERVICES_API_URL = "https://moqawalatapi-production.up.railway.app/api/services";
+const API_ORIGIN = "https://moqawalatapi-production.up.railway.app";
 
-function hasValidImage(imageSrc: string | null | undefined): imageSrc is string {
-  return typeof imageSrc === "string" && isValidImageUrl(imageSrc, { allowPlaceholders: false });
+function normalizeImageUrl(url: string | null | undefined): string | null {
+  if (!url || typeof url !== "string") return null;
+  const trimmed = url.trim();
+  if (!trimmed) return null;
+  if (trimmed.startsWith("/uploads/")) return `${API_ORIGIN}${trimmed}`;
+  if (trimmed.startsWith("uploads/")) return `${API_ORIGIN}/${trimmed}`;
+  return trimmed;
+}
+
+function normalizeService(service: Service): Service {
+  return {
+    ...service,
+    coverImage: normalizeImageUrl(service.coverImage) ?? undefined,
+    imageUrl: normalizeImageUrl(service.imageUrl) ?? undefined,
+    gallery: Array.isArray(service.gallery)
+      ? service.gallery.map((u) => normalizeImageUrl(u)).filter((u): u is string => u !== null)
+      : []
+  };
 }
 
 export default function PublicServicesClient() {
@@ -36,7 +51,7 @@ export default function PublicServicesClient() {
             : [];
 
         if (!cancelled) {
-          setServices(list);
+          setServices(list.map(normalizeService));
           setLoading(false);
         }
       } catch {
@@ -54,15 +69,6 @@ export default function PublicServicesClient() {
     };
   }, []);
 
-  const validServices = useMemo(() => {
-    return services.filter((service) => {
-      const media = resolveServiceMedia(service);
-      const image = media.coverImage || media.imageUrl || media.gallery?.[0] || "";
-
-      return hasValidImage(image);
-    });
-  }, [services]);
-
   if (loading) {
     return <div className="card admin-empty">جاري تحميل الخدمات...</div>;
   }
@@ -71,13 +77,13 @@ export default function PublicServicesClient() {
     return <div className="card admin-error-box">{error}</div>;
   }
 
-  if (validServices.length === 0) {
+  if (services.length === 0) {
     return <div className="card admin-empty">لا توجد خدمات متاحة حاليا.</div>;
   }
 
   return (
     <div className="grid grid-services">
-      {validServices.map((service) => (
+      {services.map((service) => (
         <ServiceCard key={service.id} service={service} />
       ))}
     </div>

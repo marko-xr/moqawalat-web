@@ -12,6 +12,27 @@ const IMAGE_TARGET_MAX_BYTES = 900 * 1024;
 const IMAGE_INITIAL_QUALITY = 0.82;
 const IMAGE_MIN_QUALITY = 0.55;
 const SERVICES_API_BASE_URL = "https://moqawalatapi-production.up.railway.app/api";
+const API_ORIGIN = "https://moqawalatapi-production.up.railway.app";
+
+function normalizeAdminImageUrl(url: string | null | undefined): string {
+  if (!url || typeof url !== "string") return "";
+  const trimmed = url.trim();
+  if (!trimmed) return "";
+  if (trimmed.startsWith("/uploads/")) return `${API_ORIGIN}${trimmed}`;
+  if (trimmed.startsWith("uploads/")) return `${API_ORIGIN}/${trimmed}`;
+  return trimmed;
+}
+
+function normalizeAdminService(service: Service): Service {
+  return {
+    ...service,
+    coverImage: normalizeAdminImageUrl(service.coverImage) || undefined,
+    imageUrl: normalizeAdminImageUrl(service.imageUrl) || undefined,
+    gallery: Array.isArray(service.gallery)
+      ? service.gallery.map(normalizeAdminImageUrl).filter(Boolean)
+      : []
+  };
+}
 
 type ServiceFormState = {
   id?: string;
@@ -319,13 +340,15 @@ export default function AdminServicesPage() {
     }
 
     const payload = (await response.json()) as unknown;
-    const allItems = Array.isArray(payload)
+    const rawItems = Array.isArray(payload)
       ? (payload as Service[])
       : Array.isArray((payload as { data?: unknown })?.data)
         ? ((payload as { data: Service[] }).data || [])
         : Array.isArray((payload as { items?: unknown })?.items)
           ? ((payload as { items: Service[] }).items || [])
           : [];
+
+    const allItems = rawItems.map(normalizeAdminService);
 
     const trimmedQuery = q.trim().toLowerCase();
     const filtered = allItems.filter((item) => {
