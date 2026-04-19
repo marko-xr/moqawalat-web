@@ -18,6 +18,9 @@ export default function ServiceCard({ service }: { service: Service }) {
             src={image}
             alt={service.titleAr}
             loading="lazy"
+            onError={(e) => {
+              (e.currentTarget as HTMLImageElement).style.display = "none";
+            }}
           />
         </div>
       )}

@@ -541,7 +541,10 @@ export default function AdminServicesPage() {
 
       setNotice("تم حفظ الخدمة");
       resetForm();
-      loadServices();
+      loadServices().catch((err: Error) => {
+        setError(err.message || "تعذر تحديث قائمة الخدمات");
+        setLoading(false);
+      });
     } catch {
       setError("تعذر الاتصال بالخادم أثناء حفظ الخدمة. تحقق من الشبكة وإعدادات API/CORS ثم حاول مرة أخرى.");
     } finally {
@@ -573,7 +576,10 @@ export default function AdminServicesPage() {
 
     setDeleteTarget(null);
     setNotice("تم حذف الخدمة");
-    loadServices();
+    loadServices().catch((err: Error) => {
+      setError(err.message || "تعذر تحديث قائمة الخدمات");
+      setLoading(false);
+    });
   }
 
   return (
