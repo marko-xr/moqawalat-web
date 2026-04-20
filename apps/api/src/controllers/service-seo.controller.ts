@@ -1,7 +1,7 @@
 import type { Request, Response } from "express";
 import { Prisma } from "@prisma/client";
 import { prisma } from "../services/prisma.js";
-import { isValidImageUrl, parseBoolean, parseGallery, uploadMediaFile, uploadMediaFiles } from "../services/media.js";
+import { isCloudinarySecureUrl, parseBoolean, parseGallery, uploadMediaFile, uploadMediaFiles } from "../services/media.js";
 import { resolveServiceMedia } from "../services/service-media-fallback.js";
 
 type ContentSections = Prisma.JsonObject;
@@ -91,6 +91,14 @@ function normalizeMediaList(items: unknown): string[] {
   return Array.from(new Set(values.filter((item) => isValidImageUrl(item))));
 }
 
+function isValidImageUrl(value: string) {
+  if (!value) {
+    return false;
+  }
+
+  return isCloudinarySecureUrl(value);
+}
+
 function isPlaceholderImage(value: string) {
   return value.includes("/images/placeholder-before.svg") || value.includes("/images/placeholder-after.svg");
 }
@@ -158,7 +166,7 @@ function enrichSeoPageWithService(
   }
 
   if (!isUsableSectionImage(heroImage)) {
-    currentSections.heroImage = resolvedService.coverImage || null;
+    currentSections.heroImage = resolvedService.coverImage || mergedImages[0] || null;
   } else {
     currentSections.heroImage = heroImage;
   }
@@ -222,7 +230,7 @@ function defaultContentSections(service: {
     ctaTopDescription: "اتصل الآن لتحديد أفضل حل عزل لسطح المبنى.",
     ctaBottomTitle: "جاهز لبدء التنفيذ؟",
     ctaBottomDescription: "تواصل معنا الآن عبر الاتصال أو الواتساب.",
-    heroImage: normalizeMediaList(service.coverImage)[0] || null,
+    heroImage: normalizeMediaList([service.coverImage, service.gallery[0]])[0] || null,
     beforeImage: null,
     afterImage: null
   };

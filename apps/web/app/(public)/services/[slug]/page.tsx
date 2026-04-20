@@ -1,16 +1,35 @@
 import type { Metadata } from "next";
-import { getServiceBySlug } from "@/lib/api";
+import { getServiceBySlug, getServices } from "@/lib/api";
 import { notFound } from "next/navigation";
 import { getSiteUrl } from "@/lib/site-url";
-import { isValidImageUrl, pickFirstImage, sanitizeImageList } from "@/lib/media";
+import { pickFirstImage, sanitizeImageList } from "@/lib/media";
 import { resolveServiceMedia } from "@/lib/service-media-fallback";
 import ServiceImageDebugPanel from "@/components/dev/ServiceImageDebugPanel";
 import ClientImage from "@/components/ClientImage";
 
-export const dynamic = "force-dynamic";
+export const revalidate = 300;
 
-function hasValidImage(imageSrc: string | null | undefined): imageSrc is string {
-  return typeof imageSrc === "string" && isValidImageUrl(imageSrc, { allowPlaceholders: false });
+function hasValidCloudinaryImage(imageSrc: string | null | undefined): imageSrc is string {
+  return typeof imageSrc === "string" && imageSrc.startsWith("https://res.cloudinary.com/");
+}
+
+export async function generateStaticParams() {
+  const services = await getServices();
+
+  return services
+    .filter((service) => {
+      const media = resolveServiceMedia(service);
+      const cover =
+        pickFirstImage([media.coverImage, media.imageUrl], { allowPlaceholders: false }) || media.gallery[0] || null;
+
+      if (hasValidCloudinaryImage(cover)) {
+        return true;
+      }
+
+      console.warn("Invalid service image for slug:", service.slug);
+      return false;
+    })
+    .map((service) => ({ slug: service.slug }));
 }
 
 export async function generateMetadata({ params }: { params: Promise<{ slug: string }> }): Promise<Metadata> {
@@ -41,14 +60,13 @@ export default async function ServiceDetails({ params }: { params: Promise<{ slu
 
   const media = resolveServiceMedia(service);
   const gallery: string[] = sanitizeImageList(media.gallery, { allowPlaceholders: false });
-  const cover = pickFirstImage([media.coverImage, media.imageUrl, media.gallery?.[0]], { allowPlaceholders: false });
+  const cover = pickFirstImage([media.coverImage, media.imageUrl], { allowPlaceholders: false }) || media.gallery[0] || null;
   const galleryDescriptions: string[] = Array.isArray(service.galleryDescriptions) ? service.galleryDescriptions : [];
   const videoUrl = service.videoUrl || "";
 
-  if (!hasValidImage(cover)) {
-    if (process.env.NODE_ENV !== "production") {
-      console.warn("No valid cover image for slug:", service.slug);
-    }
+  if (!hasValidCloudinaryImage(cover)) {
+    console.warn("Invalid service image for slug:", service.slug);
+    return notFound();
   }
 
   if (gallery.length === 0) {
@@ -58,11 +76,6 @@ export default async function ServiceDetails({ params }: { params: Promise<{ slu
   }
 
   if (process.env.NODE_ENV !== "production") {
-    console.log("FRONTEND RECEIVED IMAGES", service.slug, {
-      coverImage: media.coverImage || media.imageUrl || media.gallery?.[0] || null,
-      galleryCount: Array.isArray(media.gallery) ? media.gallery.length : 0
-    });
-
     console.log("[service-page]", service.slug, {
       coverImage: cover,
       galleryCount: gallery.length,
@@ -121,20 +134,18 @@ export default async function ServiceDetails({ params }: { params: Promise<{ slu
             <h1>{service.titleAr}</h1>
             <p className="lead">{service.shortDescAr}</p>
           </div>
-          {hasValidImage(cover) && (
-            <div className="service-hero-media">
-              <ClientImage
-                src={cover}
-                alt={service.titleAr}
-                width={1280}
-                height={853}
-                sizes="(max-width: 1024px) 100vw, 50vw"
-                quality={90}
-                priority
-                errorContext={`service-hero:${service.slug}`}
-              />
-            </div>
-          )}
+          <div className="service-hero-media">
+            <ClientImage
+              src={cover}
+              alt={service.titleAr}
+              width={1280}
+              height={853}
+              sizes="(max-width: 1024px) 100vw, 50vw"
+              quality={90}
+              priority
+              errorContext={`service-hero:${service.slug}`}
+            />
+          </div>
         </div>
 
         <div className="card service-body">
@@ -196,7 +207,7 @@ export default async function ServiceDetails({ params }: { params: Promise<{ slu
         {process.env.NODE_ENV !== "production" ? (
           <ServiceImageDebugPanel
             pageSlug={service.slug}
-            coverImage={media.coverImage || media.imageUrl || media.gallery?.[0] || null}
+            coverImage={media.coverImage || media.imageUrl || null}
             gallery={media.gallery}
             sourceLabel="services/[slug]"
           />

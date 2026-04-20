@@ -1,7 +1,7 @@
 import type { Request, Response } from "express";
 import { body } from "express-validator";
 import { prisma } from "../services/prisma.js";
-import { isValidImageUrl, parseBoolean, uploadMediaFile } from "../services/media.js";
+import { isCloudinarySecureUrl, parseBoolean, uploadMediaFile } from "../services/media.js";
 
 function isOptionalValidUrl(value: unknown) {
   if (value === undefined || value === null) {
@@ -22,7 +22,7 @@ function isOptionalValidUrl(value: unknown) {
   }
 }
 
-function isOptionalImageUrl(value: unknown) {
+function isOptionalCloudinaryImageUrl(value: unknown) {
   if (value === undefined || value === null) {
     return true;
   }
@@ -32,15 +32,7 @@ function isOptionalImageUrl(value: unknown) {
     return true;
   }
 
-  return isValidImageUrl(raw);
-}
-
-function logBlogIncomingImages(action: "create" | "update", postId: string | null, coverImage: string) {
-  console.log("BLOG INCOMING IMAGES", action, postId, { coverImage });
-}
-
-function logBlogSavedImages(post: { id: string; coverImage: string | null }) {
-  console.log("BLOG SAVED IMAGES", post.id, { coverImage: post.coverImage });
+  return isCloudinarySecureUrl(raw);
 }
 
 function toSlug(value: string) {
@@ -67,7 +59,7 @@ export const blogValidation = [
   body("contentAr").isLength({ min: 50 }),
   body("seoTitleAr").optional().isString().isLength({ max: 160 }),
   body("seoDescriptionAr").optional().isString().isLength({ max: 300 }),
-  body("coverImage").custom((value) => isOptionalImageUrl(value)).withMessage("Cover image must be a valid image URL"),
+  body("coverImage").custom((value) => isOptionalCloudinaryImageUrl(value)).withMessage("Cover image must be a Cloudinary URL"),
   body("published").optional().isBoolean().toBoolean()
 ];
 
@@ -98,11 +90,9 @@ export async function createBlogPost(req: Request, res: Response) {
   const uploadedCover = await uploadMediaFile(coverFile, "moqawalat/blog");
   const rawCoverImage = typeof req.body.coverImage === "string" ? req.body.coverImage.trim() : "";
 
-  logBlogIncomingImages("create", null, rawCoverImage);
-
-  if (rawCoverImage && !isValidImageUrl(rawCoverImage)) {
+  if (rawCoverImage && !isCloudinarySecureUrl(rawCoverImage)) {
     return res.status(422).json({
-      message: "Cover image must be a valid image URL.",
+      message: "Cover image must be a Cloudinary URL.",
       code: "BLOG_INVALID_COVER_URL"
     });
   }
@@ -123,8 +113,6 @@ export async function createBlogPost(req: Request, res: Response) {
     }
   });
 
-  logBlogSavedImages(post);
-
   return res.status(201).json(post);
 }
 
@@ -134,11 +122,9 @@ export async function updateBlogPost(req: Request, res: Response) {
   const uploadedCover = await uploadMediaFile(coverFile, "moqawalat/blog");
   const rawCoverImage = typeof req.body.coverImage === "string" ? req.body.coverImage.trim() : "";
 
-  logBlogIncomingImages("update", req.params.id, rawCoverImage);
-
-  if (rawCoverImage && !isValidImageUrl(rawCoverImage)) {
+  if (rawCoverImage && !isCloudinarySecureUrl(rawCoverImage)) {
     return res.status(422).json({
-      message: "Cover image must be a valid image URL.",
+      message: "Cover image must be a Cloudinary URL.",
       code: "BLOG_INVALID_COVER_URL"
     });
   }
@@ -162,8 +148,6 @@ export async function updateBlogPost(req: Request, res: Response) {
       published: typeof published === "boolean" ? published : undefined
     }
   });
-
-  logBlogSavedImages(post);
 
   return res.json(post);
 }

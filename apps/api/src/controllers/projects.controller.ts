@@ -1,7 +1,7 @@
 import type { Request, Response } from "express";
 import { body } from "express-validator";
 import { prisma } from "../services/prisma.js";
-import { isValidImageUrl, parseBoolean, parseGallery, uploadMediaFile, uploadMediaFiles } from "../services/media.js";
+import { isCloudinarySecureUrl, parseBoolean, parseGallery, uploadMediaFile, uploadMediaFiles } from "../services/media.js";
 
 const slugPattern = /^[a-z0-9]+(?:-[a-z0-9]+)*$/;
 
@@ -24,7 +24,7 @@ function isOptionalValidUrl(value: unknown) {
   }
 }
 
-function isOptionalImageUrl(value: unknown) {
+function isOptionalCloudinaryImageUrl(value: unknown) {
   if (value === undefined || value === null) {
     return true;
   }
@@ -34,38 +34,7 @@ function isOptionalImageUrl(value: unknown) {
     return true;
   }
 
-  return isValidImageUrl(raw);
-}
-
-function logProjectIncomingImages(
-  action: "create" | "update",
-  projectId: string | null,
-  coverImage: string,
-  beforeImage: string,
-  afterImage: string,
-  gallery: string[]
-) {
-  console.log("PROJECT INCOMING IMAGES", action, projectId, {
-    coverImage,
-    beforeImage,
-    afterImage,
-    gallery
-  });
-}
-
-function logProjectSavedImages(project: {
-  id: string;
-  coverImage: string | null;
-  beforeImage: string | null;
-  afterImage: string | null;
-  gallery: string[];
-}) {
-  console.log("PROJECT SAVED IMAGES", project.id, {
-    coverImage: project.coverImage,
-    beforeImage: project.beforeImage,
-    afterImage: project.afterImage,
-    gallery: project.gallery
-  });
+  return isCloudinarySecureUrl(raw);
 }
 
 function toSlug(value: string) {
@@ -99,9 +68,9 @@ export const projectCreateValidation = [
   body("descriptionAr").isLength({ min: 20 }),
   body("seoTitleAr").optional().isString().isLength({ max: 160 }),
   body("seoDescriptionAr").optional().isString().isLength({ max: 300 }),
-  body("coverImage").custom((value) => isOptionalImageUrl(value)).withMessage("coverImage must be a valid image URL"),
-  body("beforeImage").custom((value) => isOptionalImageUrl(value)).withMessage("beforeImage must be a valid image URL"),
-  body("afterImage").custom((value) => isOptionalImageUrl(value)).withMessage("afterImage must be a valid image URL"),
+  body("coverImage").custom((value) => isOptionalCloudinaryImageUrl(value)).withMessage("coverImage must be a Cloudinary URL"),
+  body("beforeImage").custom((value) => isOptionalCloudinaryImageUrl(value)).withMessage("beforeImage must be a Cloudinary URL"),
+  body("afterImage").custom((value) => isOptionalCloudinaryImageUrl(value)).withMessage("afterImage must be a Cloudinary URL"),
   body("videoUrl").custom((value) => isOptionalValidUrl(value)).withMessage("Invalid video URL"),
   body("isPublished").optional().isBoolean().toBoolean()
 ];
@@ -127,9 +96,9 @@ export const projectUpdateValidation = [
   body("descriptionAr").optional().isLength({ min: 20 }),
   body("seoTitleAr").optional().isString().isLength({ max: 160 }),
   body("seoDescriptionAr").optional().isString().isLength({ max: 300 }),
-  body("coverImage").custom((value) => isOptionalImageUrl(value)).withMessage("coverImage must be a valid image URL"),
-  body("beforeImage").custom((value) => isOptionalImageUrl(value)).withMessage("beforeImage must be a valid image URL"),
-  body("afterImage").custom((value) => isOptionalImageUrl(value)).withMessage("afterImage must be a valid image URL"),
+  body("coverImage").custom((value) => isOptionalCloudinaryImageUrl(value)).withMessage("coverImage must be a Cloudinary URL"),
+  body("beforeImage").custom((value) => isOptionalCloudinaryImageUrl(value)).withMessage("beforeImage must be a Cloudinary URL"),
+  body("afterImage").custom((value) => isOptionalCloudinaryImageUrl(value)).withMessage("afterImage must be a Cloudinary URL"),
   body("videoUrl").custom((value) => isOptionalValidUrl(value)).withMessage("Invalid video URL"),
   body("isPublished").optional().isBoolean().toBoolean()
 ];
@@ -177,26 +146,24 @@ export async function createProject(req: Request, res: Response) {
     .map((item) => String(item || "").trim())
     .filter(Boolean);
 
-  logProjectIncomingImages("create", null, rawCoverImage, rawBeforeImage, rawAfterImage, inputGallery);
-
-  const invalidGalleryItems = inputGallery.filter((item) => !isValidImageUrl(item));
+  const invalidGalleryItems = inputGallery.filter((item) => !isCloudinarySecureUrl(item));
   if (invalidGalleryItems.length > 0) {
     return res.status(422).json({
-      message: "Gallery contains invalid image URLs.",
+      message: "Gallery contains non-Cloudinary image URLs.",
       code: "PROJECT_INVALID_GALLERY_URLS"
     });
   }
 
-  if (rawCoverImage && !isValidImageUrl(rawCoverImage)) {
-    return res.status(422).json({ message: "coverImage must be a valid image URL.", code: "PROJECT_INVALID_COVER_URL" });
+  if (rawCoverImage && !isCloudinarySecureUrl(rawCoverImage)) {
+    return res.status(422).json({ message: "coverImage must be a Cloudinary URL.", code: "PROJECT_INVALID_COVER_URL" });
   }
 
-  if (rawBeforeImage && !isValidImageUrl(rawBeforeImage)) {
-    return res.status(422).json({ message: "beforeImage must be a valid image URL.", code: "PROJECT_INVALID_BEFORE_URL" });
+  if (rawBeforeImage && !isCloudinarySecureUrl(rawBeforeImage)) {
+    return res.status(422).json({ message: "beforeImage must be a Cloudinary URL.", code: "PROJECT_INVALID_BEFORE_URL" });
   }
 
-  if (rawAfterImage && !isValidImageUrl(rawAfterImage)) {
-    return res.status(422).json({ message: "afterImage must be a valid image URL.", code: "PROJECT_INVALID_AFTER_URL" });
+  if (rawAfterImage && !isCloudinarySecureUrl(rawAfterImage)) {
+    return res.status(422).json({ message: "afterImage must be a Cloudinary URL.", code: "PROJECT_INVALID_AFTER_URL" });
   }
 
   const coverImage = await uploadMediaFile(coverFile, "moqawalat/projects");
@@ -228,7 +195,6 @@ export async function createProject(req: Request, res: Response) {
     };
 
   const project = await prisma.project.create({ data: createData });
-  logProjectSavedImages(project);
   return res.status(201).json(project);
 }
 
@@ -247,26 +213,24 @@ export async function updateProject(req: Request, res: Response) {
     .map((item) => String(item || "").trim())
     .filter(Boolean);
 
-  logProjectIncomingImages("update", req.params.id, rawCoverImage, rawBeforeImage, rawAfterImage, inputGallery);
-
-  const invalidGalleryItems = inputGallery.filter((item) => !isValidImageUrl(item));
+  const invalidGalleryItems = inputGallery.filter((item) => !isCloudinarySecureUrl(item));
   if (invalidGalleryItems.length > 0) {
     return res.status(422).json({
-      message: "Gallery contains invalid image URLs.",
+      message: "Gallery contains non-Cloudinary image URLs.",
       code: "PROJECT_INVALID_GALLERY_URLS"
     });
   }
 
-  if (rawCoverImage && !isValidImageUrl(rawCoverImage)) {
-    return res.status(422).json({ message: "coverImage must be a valid image URL.", code: "PROJECT_INVALID_COVER_URL" });
+  if (rawCoverImage && !isCloudinarySecureUrl(rawCoverImage)) {
+    return res.status(422).json({ message: "coverImage must be a Cloudinary URL.", code: "PROJECT_INVALID_COVER_URL" });
   }
 
-  if (rawBeforeImage && !isValidImageUrl(rawBeforeImage)) {
-    return res.status(422).json({ message: "beforeImage must be a valid image URL.", code: "PROJECT_INVALID_BEFORE_URL" });
+  if (rawBeforeImage && !isCloudinarySecureUrl(rawBeforeImage)) {
+    return res.status(422).json({ message: "beforeImage must be a Cloudinary URL.", code: "PROJECT_INVALID_BEFORE_URL" });
   }
 
-  if (rawAfterImage && !isValidImageUrl(rawAfterImage)) {
-    return res.status(422).json({ message: "afterImage must be a valid image URL.", code: "PROJECT_INVALID_AFTER_URL" });
+  if (rawAfterImage && !isCloudinarySecureUrl(rawAfterImage)) {
+    return res.status(422).json({ message: "afterImage must be a Cloudinary URL.", code: "PROJECT_INVALID_AFTER_URL" });
   }
 
   const coverImage = await uploadMediaFile(coverFile, "moqawalat/projects");
@@ -304,8 +268,6 @@ export async function updateProject(req: Request, res: Response) {
     where: { id: req.params.id },
     data: updateData
   });
-
-  logProjectSavedImages(project);
 
   return res.json(project);
 }

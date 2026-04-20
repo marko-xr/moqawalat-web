@@ -11,7 +11,6 @@ const IMAGE_MAX_SIDE_PX = 1920;
 const IMAGE_TARGET_MAX_BYTES = 900 * 1024;
 const IMAGE_INITIAL_QUALITY = 0.82;
 const IMAGE_MIN_QUALITY = 0.55;
-const SERVICES_API_BASE_URL = "https://moqawalatapi-production.up.railway.app/api";
 
 type ServiceFormState = {
   id?: string;
@@ -62,7 +61,7 @@ function formatDate(value?: string) {
 }
 
 function hasRealImage(item: Service): boolean {
-  const cover = item.coverImage || item.imageUrl || item.gallery?.[0] || "";
+  const cover = item.coverImage || item.imageUrl || "";
   return isValidImageUrl(cover, { allowPlaceholders: false });
 }
 
@@ -177,6 +176,15 @@ function getCookieValue(name: string) {
   }
 }
 
+function getDirectApiBaseUrl() {
+  const value = (process.env.NEXT_PUBLIC_API_URL || "").trim();
+  if (!/^https?:\/\//i.test(value)) {
+    return "";
+  }
+
+  return value.replace(/\/+$/, "");
+}
+
 function toWebpFileName(fileName: string) {
   return fileName.replace(/\.[^.]+$/, "") + ".webp";
 }
@@ -284,7 +292,6 @@ export default function AdminServicesPage() {
   const [removeCoverImage, setRemoveCoverImage] = useState(false);
   const [removeVideoUrl, setRemoveVideoUrl] = useState(false);
   const [isCompressingImages, setIsCompressingImages] = useState(false);
-  const [isSaving, setIsSaving] = useState(false);
   const [deleteTarget, setDeleteTarget] = useState<Service | null>(null);
 
   const totalPages = Math.max(Math.ceil(total / PAGE_SIZE), 1);
@@ -307,46 +314,29 @@ export default function AdminServicesPage() {
     setLoading(true);
     setError("");
 
-    const token = getCookieValue("admin_token");
-    const endpoint = token ? `${SERVICES_API_BASE_URL}/services/admin` : `${SERVICES_API_BASE_URL}/services`;
-    const response = await fetch(endpoint, {
-      cache: "no-store",
-      ...(token ? { headers: { Authorization: `Bearer ${token}` } } : {})
+    const params = new URLSearchParams({
+      q,
+      published,
+      page: String(page),
+      pageSize: String(PAGE_SIZE)
     });
+
+    const response = await fetch(`/api/services?${params.toString()}`, { cache: "no-store" });
 
     if (!response.ok) {
       throw new Error("تعذر تحميل الخدمات");
     }
 
-    const payload = (await response.json()) as unknown;
-    const allItems = Array.isArray(payload)
-      ? (payload as Service[])
-      : Array.isArray((payload as { data?: unknown })?.data)
-        ? ((payload as { data: Service[] }).data || [])
-        : Array.isArray((payload as { items?: unknown })?.items)
-          ? ((payload as { items: Service[] }).items || [])
-          : [];
+    const payload = (await response.json()) as {
+      items: Service[];
+      total: number;
+      page: number;
+      totalPages: number;
+    };
 
-    const trimmedQuery = q.trim().toLowerCase();
-    const filtered = allItems.filter((item) => {
-      const matchesQuery = trimmedQuery
-        ? [item.titleAr, item.slug, item.shortDescAr].some((field) => String(field || "").toLowerCase().includes(trimmedQuery))
-        : true;
-
-      const matchesPublished =
-        published === "true" ? item.isPublished === true : published === "false" ? item.isPublished === false : true;
-
-      return matchesQuery && matchesPublished;
-    });
-
-    const computedTotal = filtered.length;
-    const computedTotalPages = Math.max(Math.ceil(computedTotal / PAGE_SIZE), 1);
-    const safePage = Math.min(page, computedTotalPages);
-    const start = (safePage - 1) * PAGE_SIZE;
-
-    setItems(filtered.slice(start, start + PAGE_SIZE));
-    setTotal(computedTotal);
-    setPage(safePage);
+    setItems(payload.items);
+    setTotal(payload.total);
+    setPage(payload.page);
     setLoading(false);
   }, [page, published, q]);
 
@@ -394,7 +384,7 @@ export default function AdminServicesPage() {
       seoDescriptionAr: item.seoDescriptionAr || "",
       videoUrl: item.videoUrl || "",
       isPublished: item.isPublished ?? true,
-      coverImage: item.coverImage || item.imageUrl || normalizedGallery[0] || "",
+      coverImage: item.coverImage || item.imageUrl || "",
       gallery: normalizedGallery,
       galleryDescriptions: [
         ...existingDescriptions.slice(0, normalizedGallery.length),
@@ -455,11 +445,6 @@ export default function AdminServicesPage() {
 
   async function handleSubmit(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
-
-    if (isSaving) {
-      return;
-    }
-
     setNotice("");
     setError("");
 
@@ -467,8 +452,6 @@ export default function AdminServicesPage() {
       setError("يرجى الانتظار حتى يكتمل ضغط الصور ثم أعد المحاولة.");
       return;
     }
-
-    setIsSaving(true);
 
     try {
       const formData = new FormData();
@@ -505,31 +488,19 @@ export default function AdminServicesPage() {
         formData.append("video", videoFile);
       }
 
-      const seenNewGalleryFileSignatures = new Set<string>();
-      galleryFiles.forEach((file) => {
-        const signature = `${file.name}::${file.size}::${file.lastModified}`;
-        if (seenNewGalleryFileSignatures.has(signature)) {
-          return;
-        }
+      galleryFiles.forEach((file) => formData.append("gallery", file));
 
-        seenNewGalleryFileSignatures.add(signature);
-        formData.append("gallery", file);
-      });
-
+      const proxyEndpoint = form.id ? `/api/services/${form.id}` : "/api/services";
       const method = form.id ? "PUT" : "POST";
+      const directApiBaseUrl = getDirectApiBaseUrl();
       const token = getCookieValue("admin_token");
-
-      if (!token) {
-        setError("غير مصرح. أعد تسجيل الدخول ثم حاول مرة أخرى.");
-        return;
-      }
-
-      const endpoint = form.id ? `${SERVICES_API_BASE_URL}/services/${form.id}` : `${SERVICES_API_BASE_URL}/services`;
+      const canUseDirectApi = Boolean(directApiBaseUrl && token);
+      const directEndpoint = form.id ? `${directApiBaseUrl}/services/${form.id}` : `${directApiBaseUrl}/services`;
+      const endpoint = canUseDirectApi ? directEndpoint : proxyEndpoint;
 
       const response = await fetch(endpoint, {
         method,
-        cache: "no-store",
-        headers: { Authorization: `Bearer ${token}` },
+        ...(canUseDirectApi ? { headers: { Authorization: `Bearer ${token}` } } : {}),
         body: formData
       });
 
@@ -541,14 +512,9 @@ export default function AdminServicesPage() {
 
       setNotice("تم حفظ الخدمة");
       resetForm();
-      loadServices().catch((err: Error) => {
-        setError(err.message || "تعذر تحديث قائمة الخدمات");
-        setLoading(false);
-      });
+      loadServices();
     } catch {
       setError("تعذر الاتصال بالخادم أثناء حفظ الخدمة. تحقق من الشبكة وإعدادات API/CORS ثم حاول مرة أخرى.");
-    } finally {
-      setIsSaving(false);
     }
   }
 
@@ -557,17 +523,7 @@ export default function AdminServicesPage() {
       return;
     }
 
-    const token = getCookieValue("admin_token");
-    if (!token) {
-      setError("غير مصرح. أعد تسجيل الدخول ثم حاول مرة أخرى.");
-      return;
-    }
-
-    const response = await fetch(`${SERVICES_API_BASE_URL}/services/${deleteTarget.id}`, {
-      method: "DELETE",
-      cache: "no-store",
-      headers: { Authorization: `Bearer ${token}` }
-    });
+    const response = await fetch(`/api/services/${deleteTarget.id}`, { method: "DELETE" });
 
     if (!response.ok) {
       setError("تعذر حذف الخدمة");
@@ -576,10 +532,7 @@ export default function AdminServicesPage() {
 
     setDeleteTarget(null);
     setNotice("تم حذف الخدمة");
-    loadServices().catch((err: Error) => {
-      setError(err.message || "تعذر تحديث قائمة الخدمات");
-      setLoading(false);
-    });
+    loadServices();
   }
 
   return (
@@ -840,8 +793,8 @@ export default function AdminServicesPage() {
             {videoFile ? <small className="admin-hint">تم اختيار ملف فيديو: {videoFile.name}</small> : null}
           </div>
 
-          <button className="btn btn-primary" type="submit" disabled={isCompressingImages || isSaving}>
-            {isSaving ? "جار الحفظ..." : isCompressingImages ? "جار تجهيز الصور..." : form.id ? "تحديث الخدمة" : "حفظ الخدمة"}
+          <button className="btn btn-primary" type="submit" disabled={isCompressingImages}>
+            {isCompressingImages ? "جار تجهيز الصور..." : form.id ? "تحديث الخدمة" : "حفظ الخدمة"}
           </button>
         </form>
       </section>
