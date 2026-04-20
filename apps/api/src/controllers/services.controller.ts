@@ -2,8 +2,7 @@ import type { Request, Response } from "express";
 import { Prisma } from "@prisma/client";
 import { body } from "express-validator";
 import { prisma } from "../services/prisma.js";
-import { parseBoolean, parseGallery, toCloudinaryDeliveryUrl, uploadMediaFile } from "../services/media.js";
-import { uploadServiceCoverImage, uploadServiceGallery } from "../services/upload.service.js";
+import { parseBoolean, parseGallery, uploadMediaFile, uploadMediaFiles } from "../services/media.js";
 import {
   collectInvalidImageUrls,
   isValidServiceImageUrl,
@@ -69,32 +68,9 @@ function parseSortOrder(value: unknown): number | undefined {
 }
 
 function sanitizeGalleryInput(value: unknown) {
-  const normalized = parseGallery(value)
-    .map((item) => String(item || "").trim())
-    .map((item) => toCloudinaryDeliveryUrl(item) || item)
-    .filter((item) => isValidServiceImageUrl(item));
-
-  return Array.from(new Set(normalized));
-}
-
-function normalizeIncomingServiceUrl(value: unknown) {
-  if (typeof value !== "string") {
-    return "";
-  }
-
-  const trimmed = value.trim();
-  if (!trimmed) {
-    return "";
-  }
-
-  return toCloudinaryDeliveryUrl(trimmed) || trimmed;
-}
-
-function normalizeIncomingGalleryInput(value: unknown) {
   return parseGallery(value)
     .map((item) => String(item || "").trim())
-    .filter((item) => item.length > 0)
-    .map((item) => toCloudinaryDeliveryUrl(item) || item);
+    .filter((item) => isValidServiceImageUrl(item));
 }
 
 type ServiceImageLogEntry = {
@@ -487,9 +463,9 @@ export async function createService(req: Request, res: Response) {
     const galleryFiles = files?.gallery || [];
     const videoFile = files?.video?.[0];
 
-    const inputGallery = normalizeIncomingGalleryInput(req.body.gallery);
-    const rawCoverImage = normalizeIncomingServiceUrl(req.body.coverImage);
-    const rawImageUrl = normalizeIncomingServiceUrl(req.body.imageUrl);
+    const inputGallery = parseGallery(req.body.gallery);
+    const rawCoverImage = typeof req.body.coverImage === "string" ? req.body.coverImage.trim() : "";
+    const rawImageUrl = typeof req.body.imageUrl === "string" ? req.body.imageUrl.trim() : "";
 
     logIncomingServiceImages("create", null, rawCoverImage, rawImageUrl, inputGallery);
 
@@ -515,8 +491,8 @@ export async function createService(req: Request, res: Response) {
       });
     }
 
-    const coverImage = await uploadServiceCoverImage(coverFile);
-    const uploadedGallery = await uploadServiceGallery(galleryFiles);
+    const coverImage = await uploadMediaFile(coverFile, "moqawalat/services");
+    const uploadedGallery = await uploadMediaFiles(galleryFiles, "moqawalat/services");
     const uploadedVideo = await uploadMediaFile(videoFile, "moqawalat/services");
 
     const gallery = sanitizeGalleryInput([...inputGallery, ...uploadedGallery]);
@@ -541,7 +517,7 @@ export async function createService(req: Request, res: Response) {
       }
     }
 
-    const coverImageValue = coverImage || rawCoverImage || rawImageUrl || null;
+    const coverImageValue = coverImage || rawCoverImage || rawImageUrl || gallery[0] || null;
     const normalizedGalleryDescriptions = normalizeDescriptions(galleryDescriptions, gallery.length);
 
     const createData: any = {
@@ -627,9 +603,9 @@ export async function updateService(req: Request, res: Response) {
       return res.status(404).json({ message: "الخدمة غير موجودة", code: "SERVICE_NOT_FOUND" });
     }
 
-    const inputGallery = normalizeIncomingGalleryInput(req.body.gallery);
-    const rawCoverImage = normalizeIncomingServiceUrl(req.body.coverImage);
-    const rawImageUrl = normalizeIncomingServiceUrl(req.body.imageUrl);
+    const inputGallery = parseGallery(req.body.gallery);
+    const rawCoverImage = typeof req.body.coverImage === "string" ? req.body.coverImage.trim() : "";
+    const rawImageUrl = typeof req.body.imageUrl === "string" ? req.body.imageUrl.trim() : "";
 
     logIncomingServiceImages("update", req.params.id, rawCoverImage, rawImageUrl, inputGallery);
 
@@ -655,8 +631,8 @@ export async function updateService(req: Request, res: Response) {
       });
     }
 
-    const coverImage = await uploadServiceCoverImage(coverFile);
-    const uploadedGallery = await uploadServiceGallery(galleryFiles);
+    const coverImage = await uploadMediaFile(coverFile, "moqawalat/services");
+    const uploadedGallery = await uploadMediaFiles(galleryFiles, "moqawalat/services");
     const uploadedVideo = await uploadMediaFile(videoFile, "moqawalat/services");
 
     const hasGalleryField = typeof req.body.gallery !== "undefined";
@@ -689,7 +665,7 @@ export async function updateService(req: Request, res: Response) {
     const nextImageUrl = imageUrl === undefined ? currentService.imageUrl : imageUrl || null;
     const nextGallery = hasGalleryField || uploadedGallery.length > 0 ? gallery : currentService.gallery;
     const currentOrIncomingCover = coverValue === undefined ? currentService.coverImage : coverValue;
-    const nextCoverImage = currentOrIncomingCover || nextImageUrl || null;
+    const nextCoverImage = currentOrIncomingCover || nextImageUrl || nextGallery[0] || null;
 
     if (hasGalleryDescriptionsField) {
       galleryDescriptions = normalizeDescriptions(galleryDescriptions, nextGallery.length);
