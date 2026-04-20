@@ -1,10 +1,10 @@
 import { cookies } from "next/headers";
 import { NextResponse } from "next/server";
-import { isValidImageUrl, sanitizeImageList, toCloudinaryDeliveryUrl } from "@/lib/media";
+import { isValidImageUrl, sanitizeImageList } from "@/lib/media";
 import { resolveServiceMedia } from "@/lib/service-media-fallback";
 
 function resolveApiBaseUrl() {
-  const raw = (process.env.API_URL || process.env.NEXT_PUBLIC_API_URL || "https://moqawalatapi-production.up.railway.app/api").trim();
+  const raw = (process.env.API_URL || process.env.NEXT_PUBLIC_API_URL || "http://localhost:4000/api").trim();
   const withoutTrailingSlash = raw.replace(/\/+$/, "");
 
   if (/\/api$/i.test(withoutTrailingSlash)) {
@@ -15,17 +15,6 @@ function resolveApiBaseUrl() {
 }
 
 const API_URL = resolveApiBaseUrl();
-
-function resolveApiOrigin() {
-  try {
-    return new URL(API_URL).origin;
-  } catch {
-    return "";
-  }
-}
-
-const API_ORIGIN = resolveApiOrigin();
-const CLOUDINARY_CLOUD_NAME = (process.env.CLOUDINARY_CLOUD_NAME || process.env.NEXT_PUBLIC_CLOUDINARY_CLOUD_NAME || "").trim();
 
 type ProxyErrorPayload = {
   message?: string;
@@ -75,24 +64,25 @@ function fallbackMessageByStatus(status: number) {
   return "تعذر حفظ الخدمة.";
 }
 
+const CLOUDINARY_DELIVERY_BASE = "https://res.cloudinary.com/";
+const CLOUDINARY_CLOUD_NAME_WEB =
+  (process.env.NEXT_PUBLIC_CLOUDINARY_CLOUD_NAME || "").trim() || "dxvhj64r0";
+
 function normalizeMediaUrl(value?: string | null) {
   if (!value) {
     return value;
   }
 
   const trimmed = value.trim();
-  const cloudinaryCanonical = toCloudinaryDeliveryUrl(trimmed, { cloudName: CLOUDINARY_CLOUD_NAME });
 
-  if (cloudinaryCanonical) {
-    return cloudinaryCanonical;
+  // Convert /uploads/... paths (local storage remnants) to full Cloudinary delivery URLs.
+  if (trimmed.startsWith("/uploads/")) {
+    const publicId = trimmed.slice("/uploads/".length);
+    return `${CLOUDINARY_DELIVERY_BASE}${CLOUDINARY_CLOUD_NAME_WEB}/image/upload/${publicId}`;
   }
 
-  if (trimmed.startsWith("/uploads/") && API_ORIGIN) {
-    return `${API_ORIGIN}${trimmed}`;
-  }
-
-  if (trimmed.startsWith("uploads/") && API_ORIGIN) {
-    return `${API_ORIGIN}/${trimmed}`;
+  if (trimmed.startsWith("uploads/")) {
+    return `${CLOUDINARY_DELIVERY_BASE}${CLOUDINARY_CLOUD_NAME_WEB}/image/upload/${trimmed}`;
   }
 
   return trimmed;

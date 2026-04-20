@@ -1,91 +1,6 @@
 const CLOUDINARY_SECURE_PREFIX = "https://res.cloudinary.com/";
 const RELATIVE_IMAGE_PREFIXES = ["/uploads/", "/images/", "uploads/", "images/", "./", "../"];
 
-function getCloudinaryDeliveryBaseUrl() {
-  const cloudName = process.env.CLOUDINARY_CLOUD_NAME?.trim() || "";
-  if (!cloudName) {
-    return "";
-  }
-
-  return `${CLOUDINARY_SECURE_PREFIX}${cloudName}/image/upload`;
-}
-
-function extractUploadsPublicId(value: string) {
-  const normalized = value.trim();
-  if (!normalized) {
-    return "";
-  }
-
-  if (normalized.startsWith("/uploads/")) {
-    return normalized.slice("/uploads/".length);
-  }
-
-  if (normalized.startsWith("uploads/")) {
-    return normalized.slice("uploads/".length);
-  }
-
-  if (normalized.startsWith("http://") || normalized.startsWith("https://")) {
-    try {
-      const parsed = new URL(normalized);
-      return extractUploadsPublicId(parsed.pathname || "");
-    } catch {
-      return "";
-    }
-  }
-
-  return "";
-}
-
-function normalizePublicIdCandidate(value: string) {
-  const normalized = value.trim().replace(/^\/+/, "").replace(/\/+$/, "");
-  if (!normalized) {
-    return "";
-  }
-
-  if (normalized.startsWith("images/") || normalized.startsWith("./") || normalized.startsWith("../")) {
-    return "";
-  }
-
-  if (/^[a-zA-Z][a-zA-Z\d+\-.]*:/.test(normalized)) {
-    return "";
-  }
-
-  return normalized;
-}
-
-export function toCloudinaryDeliveryUrl(value: unknown, options?: { allowPublicId?: boolean }): string {
-  if (typeof value !== "string") {
-    return "";
-  }
-
-  const normalized = normalizeImageUrl(value);
-  if (!normalized) {
-    return "";
-  }
-
-  if (normalized.startsWith(CLOUDINARY_SECURE_PREFIX)) {
-    return normalized;
-  }
-
-  const baseUrl = getCloudinaryDeliveryBaseUrl();
-  if (!baseUrl) {
-    return "";
-  }
-
-  const uploadsPublicId = extractUploadsPublicId(normalized);
-  const normalizedPublicId = normalizePublicIdCandidate(uploadsPublicId);
-  if (normalizedPublicId) {
-    return `${baseUrl}/${normalizedPublicId}`;
-  }
-
-  const directPublicId = options?.allowPublicId ? normalizePublicIdCandidate(normalized) : "";
-  if (directPublicId) {
-    return `${baseUrl}/${directPublicId}`;
-  }
-
-  return "";
-}
-
 export function isCloudinarySecureUrl(value: unknown): value is string {
   if (typeof value !== "string") {
     return false;
@@ -192,77 +107,25 @@ function toBoolean(value: unknown): boolean | undefined {
 }
 
 function extractUploadedMediaUrl(file: Express.Multer.File): string {
-  const uploadFile = file as Express.Multer.File & {
-    secure_url?: string;
-    path?: string;
-    url?: string;
-    filename?: string;
-    public_id?: string;
-  };
-  const cloudinaryMode = Boolean(process.env.CLOUDINARY_CLOUD_NAME?.trim());
+  const candidate = (file as Express.Multer.File & { secure_url?: string }).secure_url || file.path;
 
-  const directCandidates = [uploadFile.secure_url, uploadFile.url, uploadFile.path];
-
-  for (const candidate of directCandidates) {
-    if (typeof candidate !== "string") {
-      continue;
-    }
-
-    const normalized = normalizeImageUrl(candidate);
-    if (!normalized) {
-      continue;
-    }
-
-    if (normalized.startsWith(CLOUDINARY_SECURE_PREFIX) && isValidImageUrl(normalized)) {
-      return normalized;
-    }
-
-    const canonical = toCloudinaryDeliveryUrl(normalized);
-    if (canonical && isValidImageUrl(canonical)) {
-      return canonical;
-    }
-
-    if (cloudinaryMode) {
-      continue;
-    }
-
-    if (isValidImageUrl(normalized)) {
-      return normalized;
-    }
+  if (typeof candidate !== "string") {
+    throw new Error("INVALID_UPLOAD_URL");
   }
 
-  const fallbackCandidates = [uploadFile.public_id, uploadFile.filename];
+  const normalized = normalizeImageUrl(candidate);
 
-  for (const candidate of fallbackCandidates) {
-    const canonical = toCloudinaryDeliveryUrl(candidate, { allowPublicId: true });
-    if (canonical && isValidImageUrl(canonical)) {
-      return canonical;
-    }
+  // Cloudinary and all supported storage backends return full https:// URLs.
+  // Reject relative or protocol-less paths so they are never persisted.
+  if (!normalized.startsWith("https://") && !normalized.startsWith("http://")) {
+    throw new Error("INVALID_UPLOAD_URL");
   }
 
-  throw new Error("INVALID_UPLOAD_URL");
-}
+  if (!isValidImageUrl(normalized)) {
+    throw new Error("INVALID_UPLOAD_URL");
+  }
 
-function buildUploadDedupSignature(file: Express.Multer.File) {
-  const uploadFile = file as Express.Multer.File & {
-    secure_url?: string;
-    path?: string;
-    url?: string;
-    filename?: string;
-    public_id?: string;
-  };
-
-  return [
-    file.fieldname,
-    file.originalname,
-    file.mimetype,
-    String(file.size || ""),
-    uploadFile.public_id || "",
-    uploadFile.filename || "",
-    uploadFile.secure_url || "",
-    uploadFile.url || "",
-    uploadFile.path || ""
-  ].join("|");
+  return normalized;
 }
 
 export async function uploadMediaFile(file: Express.Multer.File | undefined, _folder: string): Promise<string | undefined> {
@@ -278,21 +141,7 @@ export async function uploadMediaFiles(files: Express.Multer.File[] | undefined,
     return [];
   }
 
-  const uniqueFiles: Express.Multer.File[] = [];
-  const seenSignatures = new Set<string>();
-
-  for (const file of files) {
-    const signature = buildUploadDedupSignature(file);
-
-    if (seenSignatures.has(signature)) {
-      continue;
-    }
-
-    seenSignatures.add(signature);
-    uniqueFiles.push(file);
-  }
-
-  const uploads = uniqueFiles.map((file) => uploadMediaFile(file, folder));
+  const uploads = files.map((file) => uploadMediaFile(file, folder));
   const results = await Promise.all(uploads);
   return results.filter((value): value is string => Boolean(value));
 }

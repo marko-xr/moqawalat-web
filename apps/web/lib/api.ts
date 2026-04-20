@@ -1,9 +1,9 @@
 import type { ServiceSeoPage } from "@/lib/types";
-import { isValidImageUrl, pickFirstImage, sanitizeImageList, toCloudinaryDeliveryUrl } from "@/lib/media";
+import { isValidImageUrl, pickFirstImage, sanitizeImageList } from "@/lib/media";
 import { resolveServiceMedia } from "@/lib/service-media-fallback";
 
 function resolveApiBaseUrl() {
-  const raw = (process.env.API_URL || process.env.NEXT_PUBLIC_API_URL || "https://moqawalatapi-production.up.railway.app/api").trim();
+  const raw = (process.env.API_URL || process.env.NEXT_PUBLIC_API_URL || "http://localhost:4000/api").trim();
   const withoutTrailingSlash = raw.replace(/\/+$/, "");
 
   if (/\/api$/i.test(withoutTrailingSlash)) {
@@ -14,18 +14,7 @@ function resolveApiBaseUrl() {
 }
 
 const API_URL = resolveApiBaseUrl();
-const PRODUCTION_SERVICES_API_BASE_URL = "https://moqawalatapi-production.up.railway.app/api";
 
-function resolveApiOrigin() {
-  try {
-    return new URL(API_URL).origin;
-  } catch {
-    return "";
-  }
-}
-
-const API_ORIGIN = resolveApiOrigin();
-const CLOUDINARY_CLOUD_NAME = (process.env.CLOUDINARY_CLOUD_NAME || process.env.NEXT_PUBLIC_CLOUDINARY_CLOUD_NAME || "").trim();
 const REQUEST_TIMEOUT_MS = 8000;
 const DEFAULT_REVALIDATE_SECONDS = 300;
 
@@ -36,24 +25,25 @@ type NextFetchInit = RequestInit & {
   };
 };
 
+const CLOUDINARY_DELIVERY_BASE = "https://res.cloudinary.com/";
+const CLOUDINARY_CLOUD_NAME_WEB =
+  (process.env.NEXT_PUBLIC_CLOUDINARY_CLOUD_NAME || "").trim() || "dxvhj64r0";
+
 function normalizeMediaUrl(value?: string | null) {
   if (!value) {
     return value;
   }
 
   const trimmed = value.trim();
-  const cloudinaryCanonical = toCloudinaryDeliveryUrl(trimmed, { cloudName: CLOUDINARY_CLOUD_NAME });
 
-  if (cloudinaryCanonical) {
-    return cloudinaryCanonical;
+  // Convert /uploads/... paths (local storage remnants) to full Cloudinary delivery URLs.
+  if (trimmed.startsWith("/uploads/")) {
+    const publicId = trimmed.slice("/uploads/".length);
+    return `${CLOUDINARY_DELIVERY_BASE}${CLOUDINARY_CLOUD_NAME_WEB}/image/upload/${publicId}`;
   }
 
-  if (trimmed.startsWith("/uploads/") && API_ORIGIN) {
-    return `${API_ORIGIN}${trimmed}`;
-  }
-
-  if (trimmed.startsWith("uploads/") && API_ORIGIN) {
-    return `${API_ORIGIN}/${trimmed}`;
+  if (trimmed.startsWith("uploads/")) {
+    return `${CLOUDINARY_DELIVERY_BASE}${CLOUDINARY_CLOUD_NAME_WEB}/image/upload/${trimmed}`;
   }
 
   return trimmed;
@@ -148,17 +138,7 @@ async function request<T>(path: string, init?: RequestInit): Promise<T> {
 
 export async function getServices() {
   try {
-    const res = await fetch(`${PRODUCTION_SERVICES_API_BASE_URL}/services`, {
-      cache: "no-store"
-    });
-
-    if (!res.ok) {
-      throw new Error(`API error: ${res.status}`);
-    }
-
-    const payload = (await res.json()) as any;
-    const services = Array.isArray(payload) ? payload : Array.isArray(payload?.data) ? payload.data : [];
-
+    const services = await request<any[]>("/services");
     if (!Array.isArray(services) || services.length === 0) {
       return [];
     }
@@ -171,21 +151,12 @@ export async function getServices() {
 
 export async function getServiceBySlug(slug: string) {
   try {
-    const res = await fetch(`${PRODUCTION_SERVICES_API_BASE_URL}/services/${slug}`, {
-      cache: "no-store"
-    });
-
-    if (!res.ok) {
-      throw new Error(`API error: ${res.status}`);
-    }
-
-    const payload = (await res.json()) as any;
-    const service = payload?.data ?? payload;
+    const service = await request<any>(`/services/${slug}`);
     const normalized = normalizeService(service);
 
     if (process.env.NODE_ENV !== "production") {
       console.log("[service] by-slug", slug, {
-        coverImage: normalized?.coverImage || normalized?.imageUrl || normalized?.gallery?.[0] || null,
+        coverImage: normalized?.coverImage || normalized?.imageUrl || null,
         galleryCount: Array.isArray(normalized?.gallery) ? normalized.gallery.length : 0
       });
     }
