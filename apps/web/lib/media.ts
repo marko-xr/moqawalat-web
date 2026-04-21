@@ -1,4 +1,5 @@
 const CLOUDINARY_SECURE_PREFIX = "https://res.cloudinary.com/";
+const LOCAL_IMAGE_PREFIX = "/images/";
 
 type SanitizeOptions = {
   allowPlaceholders?: boolean;
@@ -16,7 +17,10 @@ export function isValidImageUrl(value: unknown, options: SanitizeOptions = {}): 
     return false;
   }
 
-  return trimmed.startsWith(CLOUDINARY_SECURE_PREFIX);
+  return (
+    trimmed.startsWith(CLOUDINARY_SECURE_PREFIX) ||
+    trimmed.startsWith(LOCAL_IMAGE_PREFIX)
+  );
 }
 
 function flattenImageTokens(value: unknown): string[] {
