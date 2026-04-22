@@ -7,7 +7,7 @@ import { resolveServiceMedia } from "@/lib/service-media-fallback";
 import ServiceImageDebugPanel from "@/components/dev/ServiceImageDebugPanel";
 import ClientImage from "@/components/ClientImage";
 
-export const revalidate = 300;
+export const revalidate = 60;
 
 function hasValidCloudinaryImage(imageSrc: string | null | undefined): imageSrc is string {
   return typeof imageSrc === "string" && imageSrc.startsWith("https://res.cloudinary.com/");

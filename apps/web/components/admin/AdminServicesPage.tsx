@@ -177,7 +177,13 @@ function getCookieValue(name: string) {
 }
 
 function getDirectApiBaseUrl() {
-  const value = (process.env.NEXT_PUBLIC_API_URL || "").trim();
+  // Fall back to the known production API URL so file uploads always bypass
+  // the Next.js proxy (which may have body-size limits on Vercel).
+  const value = (
+    process.env.NEXT_PUBLIC_API_URL ||
+    "https://moqawalatapi-production.up.railway.app/api"
+  ).trim();
+
   if (!/^https?:\/\//i.test(value)) {
     return "";
   }
@@ -508,6 +514,24 @@ export default function AdminServicesPage() {
         const errorPayload = await parseApiErrorResponse(response);
         setError(buildSaveErrorMessage(response.status, errorPayload));
         return;
+      }
+
+      // Read the response body to verify that gallery images were actually saved.
+      let savedService: { gallery?: unknown } | null = null;
+      try {
+        savedService = (await response.json()) as { gallery?: unknown };
+      } catch {
+        // Not JSON — skip gallery verification.
+      }
+
+      if (savedService && galleryFiles.length > 0) {
+        const savedGalleryCount = Array.isArray(savedService.gallery) ? savedService.gallery.length : 0;
+        if (savedGalleryCount <= form.gallery.length) {
+          setError(
+            "لم يتم حفظ صور المعرض الجديدة. قد تكون الصور كبيرة جدًا أو حدث خطأ أثناء رفعها. يرجى المحاولة مرة أخرى."
+          );
+          return;
+        }
       }
 
       setNotice("تم حفظ الخدمة");

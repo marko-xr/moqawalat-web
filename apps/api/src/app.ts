@@ -18,10 +18,17 @@ import serviceSeoRoutes from "./routes/service-seo.routes.js";
 export const app = express();
 app.set("trust proxy", 1);
 
+// Additional origins may be provided via a comma-separated env var.
+const extraOrigins = (process.env.CORS_ALLOWED_ORIGINS || "")
+  .split(",")
+  .map((o) => o.trim())
+  .filter(Boolean);
+
 const allowedOrigins = new Set([
   process.env.WEB_URL || "http://localhost:3000",
   "http://localhost:3000",
-  "http://127.0.0.1:3000"
+  "http://127.0.0.1:3000",
+  ...extraOrigins
 ]);
 
 app.use(
