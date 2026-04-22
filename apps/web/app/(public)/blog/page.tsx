@@ -6,38 +6,40 @@ import { SEO_KEYWORDS } from "@/lib/seo";
 
 export const revalidate = 300;
 
-function hasValidCloudinaryCoverImage(coverImage: string | null | undefined): coverImage is string {
-  return typeof coverImage === "string" && coverImage.startsWith("https://res.cloudinary.com/");
+function isCloudinaryUrl(url: string | null | undefined): url is string {
+  return typeof url === "string" && url.startsWith("https://res.cloudinary.com/");
 }
 
 export const metadata: Metadata = {
-  title: "مدونة المقاولات بالدمام",
-  description: "مقالات عملية عن الدهانات والعزل والمظلات والسواتر والجبس والديكور في الدمام والخبر والظهران والقطيف.",
+  title: "مدونة المقاولات بالدمام | نصائح ومقالات متخصصة",
+  description:
+    "مقالات عملية ومتخصصة عن الدهانات والعزل والمظلات والسواتر والبرجولات والديكورات وترميم المنازل في الدمام والخبر والظهران والقطيف والمنطقة الشرقية.",
   keywords: SEO_KEYWORDS.blog,
-  alternates: { canonical: "/blog" }
+  alternates: { canonical: "/blog" },
+  openGraph: {
+    type: "website",
+    title: "مدونة المقاولات بالدمام",
+    description:
+      "مقالات متخصصة عن الدهانات والعزل والمظلات والسواتر والبرجولات وترميم المنازل في الدمام والمنطقة الشرقية."
+  }
 };
 
 export default async function BlogPage() {
   const posts = await getBlogPosts();
-  const validPosts = posts.filter((post) => {
-    if (hasValidCloudinaryCoverImage(post.coverImage)) {
-      return true;
-    }
-
-    console.warn("Invalid blog image for slug:", post.slug);
-    return false;
-  });
 
   return (
     <section className="section">
       <div className="container">
-        <h1>المدونة</h1>
-        {validPosts.length === 0 ? (
+        <h1>مدونة المقاولات بالدمام</h1>
+        <p className="section-lead">
+          نصائح ومقالات متخصصة عن الدهانات والعزل والمظلات والسواتر والبرجولات وترميم المنازل في الدمام والمنطقة الشرقية.
+        </p>
+        {posts.length === 0 ? (
           <div className="card seo-empty-state">
-            <h2>قريبا: مقالات ونصائح محدثة</h2>
+            <h2>قريباً: مقالات ونصائح متخصصة</h2>
             <p>
-              قسم المدونة فعال تقنيا، لكنه يحتاج إضافة مقالات منشورة من لوحة الإدارة ليظهر المحتوى. حاليا يمكنك التصفح عبر
-              صفحات الخدمات والمشاريع أو طلب معاينة مباشرة.
+              نعمل على نشر محتوى متخصص يساعدك في اتخاذ قرارات مدروسة في مجال الدهانات والعزل والمظلات والديكورات وترميم
+              المنازل في الدمام والمنطقة الشرقية.
             </p>
             <div className="action-row">
               <Link className="btn btn-primary" href="/services">
@@ -47,28 +49,30 @@ export default async function BlogPage() {
                 اطلب معاينة الآن
               </Link>
             </div>
-            <h3>مواضيع نقترح نشرها لزيادة الظهور في جوجل</h3>
+            <h3>مواضيع قادمة</h3>
             <ul className="seo-topic-list">
-              {SEO_KEYWORDS.blog.map((topic) => (
+              {SEO_KEYWORDS.blog.slice(0, 10).map((topic) => (
                 <li key={topic}>{topic}</li>
               ))}
             </ul>
           </div>
         ) : (
           <div className="grid grid-3">
-            {validPosts.map((post) => (
+            {posts.map((post) => (
               <article key={post.id} className="card blog-post-card">
-                <div className="blog-card-media">
-                  <Image
-                    src={post.coverImage}
-                    alt={post.titleAr}
-                    width={1200}
-                    height={720}
-                    className="img-full"
-                    sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw"
-                  />
-                </div>
-                <h3>{post.titleAr}</h3>
+                {isCloudinaryUrl(post.coverImage) ? (
+                  <div className="blog-card-media">
+                    <Image
+                      src={post.coverImage}
+                      alt={post.titleAr}
+                      width={1200}
+                      height={720}
+                      className="img-full"
+                      sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw"
+                    />
+                  </div>
+                ) : null}
+                <h2 className="blog-post-card-title">{post.titleAr}</h2>
                 <p>{post.excerptAr}</p>
                 <Link className="btn btn-outline" href={`/blog/${post.slug}`} prefetch={false}>
                   قراءة المقال
@@ -81,3 +85,4 @@ export default async function BlogPage() {
     </section>
   );
 }
+

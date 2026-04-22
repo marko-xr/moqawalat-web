@@ -404,8 +404,11 @@ header.site-header {
   height: 100%;
 }
 
-.blog-post-card h3 {
+.blog-post-card h3,
+.blog-post-card-title {
   margin: 0;
+  font-size: 1.05rem;
+  line-height: 1.5;
 }
 
 .blog-post-card p {
@@ -416,6 +419,14 @@ header.site-header {
 .blog-post-card .btn {
   margin-top: auto;
   align-self: flex-start;
+}
+
+.section-lead {
+  color: var(--muted);
+  margin-top: 0.5rem;
+  margin-bottom: 2rem;
+  font-size: 1.05rem;
+  line-height: 1.8;
 }
 
 .quote-form {
