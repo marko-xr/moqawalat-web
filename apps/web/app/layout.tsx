@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import { GoogleAnalytics } from "@next/third-parties/google";
+import { SpeedInsights } from "@vercel/speed-insights/next";
 import { Cairo } from "next/font/google";
 import { HOMEPAGE_SEO_DESCRIPTION, SEO_KEYWORDS } from "@/lib/seo";
 import { getSiteUrl } from "@/lib/site-url";
@@ -45,6 +46,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
       <body className={cairo.className}>
         {children}
         {gaId ? <GoogleAnalytics gaId={gaId} /> : null}
+        <SpeedInsights />
       </body>
     </html>
   );
